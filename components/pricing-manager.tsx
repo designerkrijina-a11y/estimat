@@ -59,7 +59,6 @@ export function PricingManager({ config }: { config: PricingConfig }) {
     setMessage(null)
     startTransition(async () => {
       const result = await updatePricing(formData)
-      console.log("[DEBUG updatePricing result]", JSON.stringify(result))
       if (result?.error) {
         setMessage({ type: "error", text: result.error })
       } else {
