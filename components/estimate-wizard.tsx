@@ -498,7 +498,7 @@ export function EstimateWizard() {
           </CardContent>
         </Card>
 
-        <Card style={{ borderColor: `${BRAND}33` }} className="text-center">
+        <Card style={{ borderColor: `${BRAND}33` }} className="text-center print:hidden">
           <CardContent className="flex flex-col items-center gap-2 py-8 print:py-3">
             <CheckCircle2 className="size-10" style={{ color: BRAND }} />
             <p className="text-lg font-bold">접수가 완료되었습니다</p>
