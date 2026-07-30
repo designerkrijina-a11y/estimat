@@ -78,6 +78,27 @@ function roundToTenThousand(value: number) {
   return Math.round(value / 10_000) * 10_000
 }
 
+function numberToKoreanWon(num: number) {
+  if (num <= 0) return "0원정"
+  const eok = Math.floor(num / 100_000_000)
+  const man = Math.floor((num % 100_000_000) / 10_000)
+  const rest = num % 10_000
+  const parts: string[] = []
+  if (eok > 0) parts.push(`${won.format(eok)}억`)
+  if (man > 0) parts.push(`${won.format(man)}만`)
+  if (rest > 0) parts.push(`${won.format(rest)}`)
+  return `일금 ${parts.join(" ")}원정`
+}
+
+function generateEstimateNumber() {
+  const now = new Date()
+  const yy = String(now.getFullYear()).slice(2)
+  const mm = String(now.getMonth() + 1).padStart(2, "0")
+  const dd = String(now.getDate()).padStart(2, "0")
+  const rand = Math.floor(1000 + Math.random() * 9000)
+  return `EST-${yy}${mm}${dd}-${rand}`
+}
+
 type BuildingGrade = (typeof BUILDING_GRADES)[number]["value"]
 type ConstructionType = (typeof CONSTRUCTION_TYPES)[number]["value"]
 type FinishGrade = (typeof FINISH_GRADES)[number]["value"]
@@ -120,6 +141,7 @@ export function EstimateWizard() {
 
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [estimateNumber, setEstimateNumber] = useState("")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [stepError, setStepError] = useState<string | null>(null)
 
@@ -195,23 +217,28 @@ export function EstimateWizard() {
     }
   }, [areaSqm, employees, finishGrade, buildingGrade, constructionTime, rooms, workTypes])
 
-  const selectedRoomsLabel = useMemo(() => {
-    const parts: string[] = []
-    ROOM_COUNTERS.forEach((r) => {
-      const count = rooms[r.key as keyof RoomComposition] as number
-      if (count > 0) parts.push(`${r.label} ${count}개`)
-    })
-    ROOM_TOGGLES.forEach((r) => {
-      if (rooms[r.key as keyof RoomComposition] as boolean) parts.push(r.label)
-    })
-    return parts.join(", ")
-  }, [rooms])
+  const includedWorkCount = RECOMMENDED_WORK_TYPES.length + workTypes.size
 
-  const selectedWorkTypesLabel = useMemo(() => {
-    return OPTIONAL_WORK_TYPES.filter((w) => workTypes.has(w.key))
-      .map((w) => w.label)
-      .join(", ")
-  }, [workTypes])
+  const topCategories = useMemo(() => {
+    const cats = [
+      { label: "마감 공사 (기본)", value: breakdown.finishBase + breakdown.buildingAdj },
+      { label: "공간 구성", value: breakdown.roomsCost },
+      { label: "추가 공종", value: breakdown.optionalCost },
+      { label: "공사 시간대 할증", value: breakdown.timeSurcharge },
+    ].filter((c) => c.value > 0)
+    const sum = cats.reduce((s, c) => s + c.value, 0) || 1
+    return cats
+      .map((c) => ({ ...c, pct: (c.value / sum) * 100 }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3)
+  }, [breakdown])
+
+  const { issueDateStr, validUntilStr } = useMemo(() => {
+    const now = new Date()
+    const valid = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const fmt = (d: Date) => d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })
+    return { issueDateStr: fmt(now), validUntilStr: fmt(valid) }
+  }, [done])
 
   function goNext() {
     setStepError(null)
@@ -258,6 +285,7 @@ export function EstimateWizard() {
     })
     setSubmitting(false)
     if (res.ok) {
+      setEstimateNumber(generateEstimateNumber())
       setDone(true)
     } else {
       setErrorMsg(res.error ?? "제출 중 오류가 발생했습니다.")
@@ -265,69 +293,156 @@ export function EstimateWizard() {
   }
 
   if (done) {
+    const pricePerPyeong = pyeongNum > 0 ? Math.round(total / pyeongNum) : 0
+
     return (
-      <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <div className="mx-auto flex max-w-3xl flex-col gap-4">
         <div className="flex items-center justify-between print:hidden">
-          <div className="flex items-center gap-2 text-primary">
-            <CheckCircle2 className="size-6" />
-            <h2 className="text-xl font-bold text-foreground">상세 견적서</h2>
-          </div>
+          <button
+            type="button"
+            onClick={() => setDone(false)}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← 다시 입력
+          </button>
           <Button type="button" variant="outline" onClick={() => window.print()}>
             <Printer className="size-4" />
             인쇄하기
           </Button>
         </div>
 
-        <Card className="border-primary/20">
-          <CardHeader>
-            <CardDescription>
-              {companyName} · {position}
-            </CardDescription>
-            <CardTitle className="text-3xl font-bold tracking-tight text-primary">{won.format(total)}원</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {won.format(pyeongNum)}평 ({won.format(areaSqm)}㎡) · 직원 {employees}명 · {buildingGrade}급 ·{" "}
-              {constructionType} · {finishGrade} 마감
-            </p>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <dl className="flex flex-col gap-2.5 text-sm">
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">마감 공사비 (기본)</dt>
-                <dd>{won.format(Math.round(breakdown.finishBase))}원</dd>
+        {/* Header card */}
+        <Card className="overflow-hidden border-none bg-foreground p-0 text-background">
+          <CardContent className="flex flex-col gap-6 p-6 md:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-medium text-background/60">{estimateNumber}</p>
+                <h2 className="text-2xl font-bold md:text-3xl">{companyName}</h2>
+                <p className="text-sm text-background/70">오피스 인테리어 Fit Out</p>
+                <p className="mt-1 text-xs text-background/60">
+                  담당: {position} · {email}
+                </p>
               </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">건물 등급 조정</dt>
-                <dd>{won.format(Math.round(breakdown.buildingAdj))}원</dd>
+              <div className="text-right text-xs text-background/60">
+                <p>발행일 {issueDateStr}</p>
+                <p>유효기간 {validUntilStr}</p>
               </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">공간 구성 추가비</dt>
-                <dd>{won.format(Math.round(breakdown.roomsCost))}원</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">추가 공종비</dt>
-                <dd>{won.format(Math.round(breakdown.optionalCost))}원</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">공사 시간대 할증</dt>
-                <dd>{won.format(Math.round(breakdown.timeSurcharge))}원</dd>
-              </div>
-              <div className="mt-1 flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
-                <dt>합계</dt>
-                <dd className="text-primary">{won.format(total)}원</dd>
-              </div>
-            </dl>
-
-            <div className="rounded-md bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
-              <p>선택한 공간: {selectedRoomsLabel || "없음"}</p>
-              <p className="mt-1">선택한 추가 공종: {selectedWorkTypesLabel || "없음"}</p>
             </div>
 
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              본 견적은 입력 정보를 바탕으로 한 예상 금액이며, 실제 현장 조사 후 확정됩니다. 담당자가 {email}로 상세
-              내용을 안내드립니다.
+            <div className="h-px bg-background/15" />
+
+            <div>
+              <p className="text-sm text-background/60">총 공사비 (VAT 별도)</p>
+              <p className="text-3xl font-bold tracking-tight md:text-4xl">₩{won.format(total)}</p>
+              <p className="mt-1 text-sm text-background/60">{numberToKoreanWon(total)}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-lg bg-background/10 p-3">
+                <p className="text-xs text-background/60">전용면적</p>
+                <p className="text-sm font-semibold">{won.format(pyeongNum)}평</p>
+                <p className="text-xs text-background/50">{won.format(areaSqm)}㎡</p>
+              </div>
+              <div className="rounded-lg bg-background/10 p-3">
+                <p className="text-xs text-background/60">평당 단가</p>
+                <p className="text-sm font-semibold">{won.format(Math.round(pricePerPyeong / 10_000))}만원</p>
+                <p className="text-xs text-background/50">원/평</p>
+              </div>
+              <div className="rounded-lg bg-background/10 p-3">
+                <p className="text-xs text-background/60">마감등급</p>
+                <p className="text-sm font-semibold">{finishGrade || "중급"}</p>
+                <p className="text-xs text-background/50">마감 기준</p>
+              </div>
+              <div className="rounded-lg bg-background/10 p-3">
+                <p className="text-xs text-background/60">포함 공정</p>
+                <p className="text-sm font-semibold">{includedWorkCount}개</p>
+                <p className="text-xs text-background/50">공정 산출</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cost breakdown bars */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">주요 공정 비중</CardTitle>
+            <CardDescription>전체 항목 중 비중이 큰 상위 {topCategories.length}개</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {topCategories.map((c, i) => (
+              <div key={c.label} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 font-medium">
+                    <span className="flex size-5 items-center justify-center rounded-full bg-foreground text-xs text-background">
+                      {i + 1}
+                    </span>
+                    {c.label}
+                  </span>
+                  <span className="font-semibold">{c.pct.toFixed(1)}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-foreground" style={{ width: `${c.pct}%` }} />
+                </div>
+              </div>
+            ))}
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              전체 항목의 상세 내역과 산출 근거는 담당자 검토 후 회신 이메일로 안내해 드립니다.
             </p>
           </CardContent>
         </Card>
+
+        {/* Completion notice */}
+        <Card className="border-primary/20 text-center">
+          <CardContent className="flex flex-col items-center gap-2 py-8">
+            <CheckCircle2 className="size-10 text-primary" />
+            <p className="text-lg font-bold">접수가 완료되었습니다</p>
+            <p className="text-sm text-muted-foreground">
+              담당자가 견적 내용을 검토 후, 24시간 이내로 {email} 또는 {phone}으로 연락드립니다.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Estimate basis grid */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">견적 산출 기준</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {[
+              { label: "전용면적", value: `${won.format(areaSqm)}㎡ (${won.format(pyeongNum)}평)` },
+              { label: "직원 수", value: `${employees}명` },
+              { label: "건물등급", value: `${buildingGrade}급` },
+              { label: "마감등급", value: finishGrade || "중급" },
+              { label: "공사유형", value: constructionType },
+              { label: "공사시간대", value: constructionTime || "주간" },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+                <p className="text-sm font-semibold">{item.value}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">참고사항</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-1.5 text-xs leading-relaxed text-muted-foreground">
+              <li>· 본 견적서는 자동 산출 결과로, 실제 시공 금액과 차이가 발생할 수 있습니다.</li>
+              <li>· VAT(부가가치세) 별도 기준입니다.</li>
+              <li>· 견적 유효기간: 발행일로부터 30일 ({validUntilStr})</li>
+              <li>· 자재비 및 인건비는 시장 변동에 따라 단가가 변동될 수 있습니다.</li>
+              <li>· 정확한 견적은 현장 실측 후 담당자와 협의하시기 바랍니다.</li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground">
+          본 견적서는 자동 생성되었으며, 정식 계약 전 참고용입니다.
+        </p>
       </div>
     )
   }
@@ -586,7 +701,7 @@ export function EstimateWizard() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="companyName">회사명</Label>
-                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="(주)드로잉디자인" />
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="(주)회사명" />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="position">직급 / 직책</Label>
@@ -596,7 +711,6 @@ export function EstimateWizard() {
             <div className="flex flex-col gap-2">
               <Label htmlFor="email">이메일</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
-              <p className="text-xs text-muted-foreground">담당자가 이 이메일로 상세 견적서를 보내드립니다</p>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="phone">연락처</Label>
