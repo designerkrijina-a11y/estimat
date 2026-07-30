@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { logout } from "./login/actions"
+import { AdminExportButton } from "@/components/admin-export-button"
 
 export const dynamic = "force-dynamic"
 
@@ -10,7 +11,9 @@ type EstimateRequest = {
   area_sqm: number | null
   employee_count: number | null
   building_grade: string | null
+  finish_grade: string | null
   construction_type: string | null
+  construction_time: string | null
   estimated_price: number | null
   contact_name: string | null
   contact_phone: string | null
@@ -52,14 +55,29 @@ function GradeBadge({ grade }: { grade: string | null }) {
   )
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string; pyeong?: string; contact?: string }>
+}) {
+  const params = await searchParams
+  const from = params.from ?? ""
+  const to = params.to ?? ""
+  const pyeong = params.pyeong ?? ""
+  const contact = params.contact ?? ""
+
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("estimate_requests")
-    .select("*")
-    .order("created_at", { ascending: false })
+
+  let query = supabase.from("estimate_requests").select("*").order("created_at", { ascending: false })
+  if (from) query = query.gte("created_at", `${from}T00:00:00`)
+  if (to) query = query.lte("created_at", `${to}T23:59:59`)
+  if (pyeong) query = query.eq("pyeong", Number(pyeong))
+  if (contact) query = query.ilike("contact_name", `%${contact}%`)
+
+  const { data, error } = await query
 
   const rows = (data ?? []) as EstimateRequest[]
+  const hasFilter = Boolean(from || to || pyeong || contact)
 
   const totalCount = rows.length
   const avgPrice =
@@ -86,9 +104,82 @@ export default async function AdminPage() {
           </form>
         </header>
 
+        <form
+          method="GET"
+          className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4"
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground" htmlFor="from">
+              시작일
+            </label>
+            <input
+              id="from"
+              type="date"
+              name="from"
+              defaultValue={from}
+              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground" htmlFor="to">
+              종료일
+            </label>
+            <input
+              id="to"
+              type="date"
+              name="to"
+              defaultValue={to}
+              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground" htmlFor="pyeong">
+              평수
+            </label>
+            <input
+              id="pyeong"
+              type="number"
+              name="pyeong"
+              defaultValue={pyeong}
+              placeholder="예: 50"
+              className="w-24 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground" htmlFor="contact">
+              담당자 / 회사명
+            </label>
+            <input
+              id="contact"
+              type="text"
+              name="contact"
+              defaultValue={contact}
+              placeholder="검색어 입력"
+              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            검색
+          </button>
+          {hasFilter && (
+            <a
+              href="/admin"
+              className="rounded-md border border-border px-4 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+            >
+              초기화
+            </a>
+          )}
+          <div className="ml-auto">
+            <AdminExportButton rows={rows} />
+          </div>
+        </form>
+
         <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">총 요청 건수</p>
+            <p className="text-sm text-muted-foreground">{hasFilter ? "검색된 요청 건수" : "총 요청 건수"}</p>
             <p className="mt-1 text-2xl font-bold">{numberFmt.format(totalCount)}건</p>
           </div>
           <div className="rounded-lg border border-border bg-card p-5">
@@ -103,7 +194,7 @@ export default async function AdminPage() {
           </div>
         ) : rows.length === 0 ? (
           <div className="rounded-lg border border-border bg-card p-10 text-center text-muted-foreground">
-            아직 접수된 견적 요청이 없습니다.
+            {hasFilter ? "검색 조건에 맞는 견적 요청이 없습니다." : "아직 접수된 견적 요청이 없습니다."}
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border">
