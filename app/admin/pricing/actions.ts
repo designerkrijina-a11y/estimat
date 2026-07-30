@@ -25,6 +25,8 @@ export async function updatePricing(formData: FormData) {
 
   const d = DEFAULT_PRICING
 
+  console.log("[updatePricing] received formData:", JSON.stringify(Object.fromEntries(formData.entries())))
+
   const config: PricingConfig = {
     finishPricePerSqm: num(formData, "finishPricePerSqm", d.finishPricePerSqm),
     finishGradeModifiers: {
