@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { logout } from "./login/actions"
 import { AdminExportButton } from "@/components/admin-export-button"
@@ -68,6 +69,16 @@ export default async function AdminPage({
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let isSuperAdmin = false
+  if (user) {
+    const { data: profile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
+    isSuperAdmin = profile?.role === "super_admin"
+  }
+
   let query = supabase.from("estimate_requests").select("*").order("created_at", { ascending: false })
   if (from) query = query.gte("created_at", `${from}T00:00:00`)
   if (to) query = query.lte("created_at", `${to}T23:59:59`)
@@ -94,14 +105,24 @@ export default async function AdminPage({
             <h1 className="text-pretty text-3xl font-bold tracking-tight">견적 요청 관리 보드</h1>
             <p className="text-muted-foreground">접수된 견적 요청을 최신순으로 확인하세요.</p>
           </div>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-            >
-              로그아웃
-            </button>
-          </form>
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <Link
+                href="/admin/accounts"
+                className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+              >
+                계정관리
+              </Link>
+            )}
+            <form action={logout}>
+              <button
+                type="submit"
+                className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+              >
+                로그아웃
+              </button>
+            </form>
+          </div>
         </header>
 
         <form
