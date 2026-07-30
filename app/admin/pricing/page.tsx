@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DEFAULT_PRICING, mergePricing } from "@/lib/pricing"
 import { PricingManager } from "@/components/pricing-manager"
@@ -7,6 +8,15 @@ export const dynamic = "force-dynamic"
 
 export default async function PricingPage() {
   const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect("/admin/login")
+
+  const { data: myProfile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
+  if (myProfile?.role !== "super_admin" && myProfile?.role !== "admin") redirect("/admin")
+
   const { data } = await supabase.from("pricing_config").select("config").eq("id", 1).single()
   const config = data?.config ? mergePricing(data.config) : DEFAULT_PRICING
 

@@ -18,6 +18,11 @@ export async function updatePricing(formData: FormData) {
   } = await supabase.auth.getUser()
   if (!user) return { error: "로그인이 필요합니다." }
 
+  const { data: profile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
+  if (profile?.role !== "super_admin" && profile?.role !== "admin") {
+    return { error: "관리자 이상만 단가를 수정할 수 있습니다." }
+  }
+
   const d = DEFAULT_PRICING
 
   const config: PricingConfig = {

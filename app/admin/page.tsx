@@ -74,9 +74,11 @@ export default async function AdminPage({
   } = await supabase.auth.getUser()
 
   let isSuperAdmin = false
+  let canManagePricing = false
   if (user) {
     const { data: profile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
     isSuperAdmin = profile?.role === "super_admin"
+    canManagePricing = profile?.role === "super_admin" || profile?.role === "admin"
   }
 
   let query = supabase.from("estimate_requests").select("*").order("created_at", { ascending: false })
@@ -106,12 +108,14 @@ export default async function AdminPage({
             <p className="text-muted-foreground">접수된 견적 요청을 최신순으로 확인하세요.</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href="/admin/pricing"
-              className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-            >
-              단가관리
-            </Link>
+            {canManagePricing && (
+              <Link
+                href="/admin/pricing"
+                className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+              >
+                단가관리
+              </Link>
+            )}
             {isSuperAdmin && (
               <Link
                 href="/admin/accounts"
