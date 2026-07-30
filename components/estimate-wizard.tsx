@@ -401,10 +401,13 @@ export function EstimateWizard() {
         <div className="flex items-center justify-between print:hidden">
           <button
             type="button"
-            onClick={() => setDone(false)}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setStep(0)
+              setDone(false)
+            }}
+            className="text-sm font-medium text-muted-foreground hover:text-foreground"
           >
-            ← 다시 입력
+            ← 처음으로 (입력값 유지)
           </button>
           <Button type="button" variant="outline" onClick={() => window.print()}>
             <Printer className="size-4" />
