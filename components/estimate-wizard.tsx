@@ -539,6 +539,46 @@ export function EstimateWizard() {
                   </p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base print:text-xs">견적 산출 기준</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3 print:gap-1 sm:grid-cols-3">
+                  {[
+                    { label: "전용면적", value: `${won.format(areaSqm)}㎡ (${won.format(pyeongNum)}평)` },
+                    { label: "직원 수", value: `${employees}명` },
+                    { label: "건물등급", value: `${buildingGrade}급` },
+                    { label: "마감등급", value: gradeLabel },
+                    { label: "공사유형", value: constructionType },
+                    { label: "공사시간대", value: constructionTime || "주간" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-lg border border-border p-3 print:p-1.5">
+                      <p className="text-xs text-muted-foreground print:text-[9px] print:leading-tight">{item.label}</p>
+                      <p className="text-sm font-semibold print:text-xs print:leading-tight">{item.value}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base print:text-xs">참고사항</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="flex flex-col gap-1.5 print:gap-0.5 text-xs leading-relaxed text-muted-foreground print:text-[9px] print:leading-snug">
+                    <li>· 본 견적서는 자동 산출 결과로, 실제 시공 금액과 차이가 발생할 수 있습니다.</li>
+                    <li>· VAT(부가가치세) 별도 기준입니다.</li>
+                    <li>· 견적 유효기간: 발행일로부터 30일 ({validUntilStr})</li>
+                    <li>· 자재비 및 인건비는 시장 변동에 따라 단가가 변동될 수 있습니다.</li>
+                    <li>· 정확한 견적은 현장 실측 후 담당자와 협의하시기 바랍니다.</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <p className="text-center text-xs text-muted-foreground">
+                본 견적서는 자동 생성되었으며, 정식 계약 전 참고용입니다.
+              </p>
             </div>
           )
         })}
@@ -552,52 +592,6 @@ export function EstimateWizard() {
             </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base print:text-xs">견적 산출 기준</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 print:gap-1 sm:grid-cols-3">
-            {[
-              { label: "전용면적", value: `${won.format(areaSqm)}㎡ (${won.format(pyeongNum)}평)` },
-              { label: "직원 수", value: `${employees}명` },
-              { label: "건물등급", value: `${buildingGrade}급` },
-              {
-                label: "마감등급",
-                value:
-                  estimates.length > 1
-                    ? estimates.map((e) => FINISH_GRADES.find((f) => f.value === e.grade)?.label ?? e.grade).join(", ")
-                    : (FINISH_GRADES.find((f) => f.value === estimates[0]?.grade)?.label ?? "중급"),
-              },
-              { label: "공사유형", value: constructionType },
-              { label: "공사시간대", value: constructionTime || "주간" },
-            ].map((item) => (
-              <div key={item.label} className="rounded-lg border border-border p-3 print:p-1.5">
-                <p className="text-xs text-muted-foreground print:text-[9px] print:leading-tight">{item.label}</p>
-                <p className="text-sm font-semibold print:text-xs print:leading-tight">{item.value}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base print:text-xs">참고사항</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-1.5 print:gap-0.5 text-xs leading-relaxed text-muted-foreground print:text-[9px] print:leading-snug">
-              <li>· 본 견적서는 자동 산출 결과로, 실제 시공 금액과 차이가 발생할 수 있습니다.</li>
-              <li>· VAT(부가가치세) 별도 기준입니다.</li>
-              <li>· 견적 유효기간: 발행일로부터 30일 ({validUntilStr})</li>
-              <li>· 자재비 및 인건비는 시장 변동에 따라 단가가 변동될 수 있습니다.</li>
-              <li>· 정확한 견적은 현장 실측 후 담당자와 협의하시기 바랍니다.</li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-xs text-muted-foreground">
-          본 견적서는 자동 생성되었으며, 정식 계약 전 참고용입니다.
-        </p>
       </div>
     )
   }
