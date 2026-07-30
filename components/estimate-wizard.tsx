@@ -1,0 +1,570 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import { Building2, Users, Sparkles, Hammer, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { submitEstimate, type RoomComposition } from "@/app/estimate/actions"
+
+const PYEONG_TO_SQM = 3.3
+const FINISH_PRICE_PER_SQM = 350_000
+
+const STEPS = ["기본 정보", "공간 구성", "공종 선택", "추가 질문", "연락처"] as const
+
+const BUILDING_GRADES = [
+  { value: "A", label: "A급 프리미엄", desc: "앵커원·파르나스·서울스퀘어 등 초고층 프라임 오피스", modifier: 0.28 },
+  { value: "B", label: "B급 일반 오피스", desc: "ISUFIVE·지식산업센터 등 표준 오피스 건물", modifier: 0 },
+  { value: "C", label: "C급 일반 건물", desc: "구형 상가·공장 사옥·지방 오피스 등", modifier: -0.05 },
+] as const
+
+const CONSTRUCTION_TYPES = [
+  { value: "신규", label: "신규 인테리어", desc: "기존 내장재 없이 새로 시공", icon: Sparkles },
+  { value: "리모델링", label: "리모델링", desc: "기존 인테리어 철거 후 재시공", icon: Hammer },
+] as const
+
+const FINISH_GRADES = [
+  { value: "초급", label: "초급 마감", tag: "절감형", desc: "노출천정 도장·LVT 바닥·합판도어·기본 칸막이", modifier: 0.8 },
+  { value: "중급", label: "중급 마감", tag: "기본형", desc: "석고천정·LVT+카펫·유리파티션·방염벽지", modifier: 1.0 },
+  { value: "고급", label: "고급 마감", tag: "×1.35", desc: "목모보드/바리솔·특수도장·디자인조명", modifier: 1.35 },
+  { value: "프리미엄", label: "프리미엄 마감", tag: "×1.8", desc: "전 공정 최고급·대리석·바리솔 전체", modifier: 1.8 },
+] as const
+
+const RECOMMENDED_WORK_TYPES = [
+  { key: "dryWall", label: "건식벽체", desc: "경량칸막이·단열재·석고보드" },
+  { key: "glassWall", label: "유리벽체", desc: "10T 강화유리+ST'L 프레임" },
+  { key: "paintWall", label: "수벽공사", desc: "석고+도장 마감 벽체" },
+  { key: "electrical", label: "전기공사", desc: "전등·전열·소방전기·동력" },
+  { key: "mechanical", label: "설비공사", desc: "소화배관·공조덕트·위생배관" },
+  { key: "signage", label: "실명 사인", desc: "실명·메인로고·라운지사인" },
+] as const
+
+const OPTIONAL_WORK_TYPES = [
+  { key: "demolition", label: "철거공사", desc: "기존 마감재 철거 (리모델링 시)" },
+  { key: "relocation", label: "기업이전", desc: "이사·포장·운반 (인원수 기반 자동 산출)" },
+  { key: "hvac", label: "냉난방기공사", desc: "시스템에어컨 실내외기+배관" },
+  { key: "network", label: "통신공사", desc: "CAT-6 케이블링·무선AP·패치패널" },
+  { key: "av", label: "영상장비 및 AV", desc: "모니터·화상회의·음향" },
+  { key: "furniture", label: "사무가구 구매", desc: "책상·의자·스토리지" },
+] as const
+
+const CONSTRUCTION_TIMES = [
+  { value: "주간", label: "주간 공사", desc: "평일 09:00~18:00 기준 (기본 단가)", modifier: 0 },
+  { value: "부분야간", label: "부분 야간", desc: "소음·분진 작업만 야간 (노무비 +15%)", modifier: 0.15 },
+  { value: "전면야간", label: "전면 야간", desc: "평일 22:00~익일 06:00 (노무비 +32%)", modifier: 0.32 },
+  { value: "주말야간", label: "주말·고강도 야간", desc: "주말 주야간 + 평일 야간 (노무비 +50%)", modifier: 0.5 },
+] as const
+
+const ROOM_COUNTERS = [
+  { key: "executive", label: "임원 공간", desc: "대표이사실 / 임원실 — 독립 공간으로 별도 설계", price: 8_000_000 },
+  { key: "meetingLarge", label: "대회의실", desc: "15~20인, ~35㎡, 폴딩도어 포함", price: 15_000_000 },
+  { key: "meetingMid", label: "중회의실", desc: "6~12인, ~13㎡", price: 7_000_000 },
+  { key: "meetingSmall", label: "소회의실", desc: "2~5인, ~10㎡", price: 4_000_000 },
+  { key: "phoneBooth", label: "1인 작업실 / 폰부스", desc: "~4㎡ 소형 독립공간", price: 2_000_000 },
+  { key: "storage", label: "창고", desc: "~12㎡ 기준", price: 1_500_000 },
+] as const
+
+const ROOM_TOGGLES = [
+  { key: "lounge", label: "라운지 / 캔틴", desc: "휴게+미팅 복합 공간", price: 18_000_000 },
+  { key: "studio", label: "스튜디오 / 촬영실", desc: "LED·라운드벽체 특수 마감", price: 25_000_000 },
+  { key: "oaRoom", label: "OA실 / 탕비실", desc: "싱크대·상부장 제작가구", price: 6_000_000 },
+  { key: "serverRoom", label: "서버룸", desc: "항온항습·청정소화 별도", price: 10_000_000 },
+] as const
+
+const won = new Intl.NumberFormat("ko-KR")
+
+function roundToTenThousand(value: number) {
+  return Math.round(value / 10_000) * 10_000
+}
+
+type BuildingGrade = (typeof BUILDING_GRADES)[number]["value"]
+type ConstructionType = (typeof CONSTRUCTION_TYPES)[number]["value"]
+type FinishGrade = (typeof FINISH_GRADES)[number]["value"]
+type ConstructionTime = (typeof CONSTRUCTION_TIMES)[number]["value"]
+
+const initialRooms: RoomComposition = {
+  executive: 0,
+  meetingLarge: 0,
+  meetingMid: 1,
+  meetingSmall: 1,
+  lounge: false,
+  studio: false,
+  oaRoom: false,
+  serverRoom: false,
+  phoneBooth: 0,
+  storage: 1,
+}
+
+export function EstimateWizard() {
+  const [step, setStep] = useState(0)
+
+  const [pyeong, setPyeong] = useState("50")
+  const [sqm, setSqm] = useState((50 * PYEONG_TO_SQM).toFixed(1))
+  const [employeeCount, setEmployeeCount] = useState("20")
+  const [buildingGrade, setBuildingGrade] = useState<BuildingGrade>("B")
+  const [constructionType, setConstructionType] = useState<ConstructionType>("신규")
+
+  const [rooms, setRooms] = useState<RoomComposition>(initialRooms)
+
+  const [finishGrade, setFinishGrade] = useState<FinishGrade | "">("")
+  const [workTypes, setWorkTypes] = useState<Set<string>>(new Set())
+
+  const [constructionTime, setConstructionTime] = useState<ConstructionTime | "">("")
+
+  const [companyName, setCompanyName] = useState("")
+  const [position, setPosition] = useState("")
+  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
+  const [consent, setConsent] = useState(false)
+
+  const [submitting, setSubmitting] = useState(false)
+  const [done, setDone] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [stepError, setStepError] = useState<string | null>(null)
+
+  function handlePyeongChange(v: string) {
+    setPyeong(v)
+    const n = Number.parseFloat(v)
+    setSqm(Number.isFinite(n) ? (n * PYEONG_TO_SQM).toFixed(1) : "")
+  }
+
+  function handleSqmChange(v: string) {
+    setSqm(v)
+    const n = Number.parseFloat(v)
+    setPyeong(Number.isFinite(n) ? (n / PYEONG_TO_SQM).toFixed(1) : "")
+  }
+
+  const areaSqm = Number.parseFloat(sqm) || 0
+  const pyeongNum = Number.parseFloat(pyeong) || 0
+  const employees = Number.parseInt(employeeCount, 10) || 0
+
+  function toggleWorkType(key: string) {
+    setWorkTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function updateRoomCount(key: keyof RoomComposition, delta: number) {
+    setRooms((prev) => {
+      const current = prev[key]
+      if (typeof current !== "number") return prev
+      const nextValue = Math.max(0, current + delta)
+      return { ...prev, [key]: nextValue }
+    })
+  }
+
+  function toggleRoom(key: keyof RoomComposition) {
+    setRooms((prev) => {
+      const current = prev[key]
+      if (typeof current !== "boolean") return prev
+      return { ...prev, [key]: !current }
+    })
+  }
+
+  const { total } = useMemo(() => {
+    const finishMod = FINISH_GRADES.find((f) => f.value === finishGrade)?.modifier ?? 1
+    const buildingMod = BUILDING_GRADES.find((g) => g.value === buildingGrade)?.modifier ?? 0
+    const timeMod = CONSTRUCTION_TIMES.find((t) => t.value === constructionTime)?.modifier ?? 0
+
+    const finishBase = areaSqm * FINISH_PRICE_PER_SQM * finishMod
+    const buildingAdj = finishBase * buildingMod
+
+    const roomsCost =
+      ROOM_COUNTERS.reduce((sum, r) => sum + (rooms[r.key as keyof RoomComposition] as number) * r.price, 0) +
+      ROOM_TOGGLES.reduce((sum, r) => sum + ((rooms[r.key as keyof RoomComposition] as boolean) ? r.price : 0), 0)
+
+    let optionalCost = 0
+    if (workTypes.has("demolition")) optionalCost += areaSqm * 15_570
+    if (workTypes.has("relocation")) optionalCost += employees * 80_000
+    if (workTypes.has("hvac")) optionalCost += areaSqm * 25_000
+    if (workTypes.has("network")) optionalCost += areaSqm * 12_000
+    if (workTypes.has("av")) optionalCost += 4_000_000
+    if (workTypes.has("furniture")) optionalCost += employees * 570_000
+
+    const subtotal = finishBase + buildingAdj + roomsCost + optionalCost
+    const timeSurcharge = subtotal * timeMod
+    const finalTotal = roundToTenThousand(subtotal + timeSurcharge)
+
+    return { total: finalTotal }
+  }, [areaSqm, employees, finishGrade, buildingGrade, constructionTime, rooms, workTypes])
+
+  function goNext() {
+    setStepError(null)
+    if (step === 0) {
+      if (!pyeongNum || pyeongNum <= 0) return setStepError("전용면적을 입력해주세요.")
+      if (!employees || employees <= 0) return setStepError("직원 수를 1명 이상 입력해주세요.")
+    }
+    if (step === 2 && !finishGrade) return setStepError("마감등급을 선택해주세요.")
+    if (step === 3 && !constructionTime) return setStepError("공사 시간대를 선택해주세요.")
+    setStep((s) => Math.min(s + 1, STEPS.length - 1))
+  }
+
+  function goPrev() {
+    setStepError(null)
+    setStep((s) => Math.max(s - 1, 0))
+  }
+
+  async function handleFinalSubmit() {
+    setStepError(null)
+    if (!companyName.trim()) return setStepError("회사명을 입력해주세요.")
+    if (!position.trim()) return setStepError("직급/직책을 입력해주세요.")
+    if (!email.trim()) return setStepError("이메일을 입력해주세요.")
+    if (!phone.trim()) return setStepError("연락처를 입력해주세요.")
+    if (!consent) return setStepError("개인정보 수집 및 이용에 동의해주세요.")
+
+    setSubmitting(true)
+    setErrorMsg(null)
+    const res = await submitEstimate({
+      pyeong: pyeongNum,
+      area_sqm: areaSqm,
+      employee_count: employees,
+      building_grade: buildingGrade,
+      construction_type: constructionType,
+      finish_grade: (finishGrade || "중급") as FinishGrade,
+      construction_time: (constructionTime || "주간") as ConstructionTime,
+      included_work_types: Array.from(workTypes),
+      room_composition: rooms,
+      estimated_price: total,
+      company_name: companyName.trim(),
+      position: position.trim(),
+      contact_phone: phone.trim(),
+      contact_email: email.trim(),
+      privacy_consent: consent,
+    })
+    setSubmitting(false)
+    if (res.ok) {
+      setDone(true)
+    } else {
+      setErrorMsg(res.error ?? "제출 중 오류가 발생했습니다.")
+    }
+  }
+
+  if (done) {
+    return (
+      <Card className="mx-auto max-w-lg border-primary/20 text-center">
+        <CardContent className="flex flex-col items-center gap-4 py-12">
+          <CheckCircle2 className="size-14 text-primary" />
+          <h2 className="text-xl font-bold">견적서가 생성되었습니다</h2>
+          <p className="text-muted-foreground">담당자가 확인 후 빠르게 연락드리겠습니다.</p>
+          <div className="mt-2 w-full rounded-lg border border-border bg-muted/40 p-5 text-left">
+            <p className="text-sm text-muted-foreground">예상 견적 금액</p>
+            <p className="text-2xl font-bold text-primary">{won.format(total)}원</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <div className="flex items-center justify-between gap-1 overflow-x-auto rounded-lg border border-border bg-card p-2">
+        {STEPS.map((label, i) => (
+          <div
+            key={label}
+            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 py-2 text-xs font-medium sm:text-sm ${
+              i === step ? "bg-primary text-primary-foreground" : i < step ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <span className="flex size-5 items-center justify-center rounded-full border border-current text-[10px]">
+              {i + 1}
+            </span>
+            <span className="hidden sm:inline">{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {step === 0 && (
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building2 className="size-5 text-primary" />
+                공간 정보
+              </CardTitle>
+              <CardDescription>전용면적은 평 또는 ㎡ 중 하나만 입력하면 자동 변환됩니다.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="pyeong">전용면적 (평)</Label>
+                  <div className="relative">
+                    <Input id="pyeong" inputMode="decimal" value={pyeong} onChange={(e) => handlePyeongChange(e.target.value)} className="pr-10" />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">평</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="sqm">전용면적 (㎡)</Label>
+                  <div className="relative">
+                    <Input id="sqm" inputMode="decimal" value={sqm} onChange={(e) => handleSqmChange(e.target.value)} className="pr-10" />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">㎡</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="employees" className="flex items-center gap-1.5">
+                  <Users className="size-4 text-muted-foreground" />
+                  입주 예정 직원 수
+                </Label>
+                <div className="relative">
+                  <Input id="employees" inputMode="numeric" value={employeeCount} onChange={(e) => setEmployeeCount(e.target.value.replace(/[^0-9]/g, ""))} className="pr-12" />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">명</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">건물 등급</CardTitle>
+              <CardDescription>프리미엄 빌딩은 가설공사비가 높아집니다.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-3">
+              {BUILDING_GRADES.map((g) => {
+                const selected = buildingGrade === g.value
+                const pct = g.modifier > 0 ? `+${Math.round(g.modifier * 100)}%` : g.modifier < 0 ? `${Math.round(g.modifier * 100)}%` : "기준"
+                return (
+                  <button key={g.value} type="button" onClick={() => setBuildingGrade(g.value)} aria-pressed={selected}
+                    className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                    <span className="flex items-center justify-between">
+                      <span className="font-semibold">{g.label}</span>
+                      <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{pct}</span>
+                    </span>
+                    <span className="text-xs leading-relaxed text-muted-foreground">{g.desc}</span>
+                  </button>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">공사 유형</CardTitle>
+              <CardDescription>리모델링은 3단계에서 철거공사를 선택하면 철거비가 추가됩니다.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              {CONSTRUCTION_TYPES.map((c) => {
+                const selected = constructionType === c.value
+                const Icon = c.icon
+                return (
+                  <button key={c.value} type="button" onClick={() => setConstructionType(c.value)} aria-pressed={selected}
+                    className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                    <Icon className={`mt-0.5 size-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="flex flex-col gap-1">
+                      <span className="font-semibold">{c.label}</span>
+                      <span className="text-xs leading-relaxed text-muted-foreground">{c.desc}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {step === 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">공간 구성</CardTitle>
+            <CardDescription>필요한 특수 공간의 개수를 입력하거나 켜주세요.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-semibold">회의실 / 업무 공간</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {ROOM_COUNTERS.map((r) => (
+                  <div key={r.key} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{r.label}</span>
+                      <span className="text-xs text-muted-foreground">{r.desc}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => updateRoomCount(r.key as keyof RoomComposition, -1)}
+                        className="flex size-7 items-center justify-center rounded-md border border-border text-sm hover:bg-muted">−</button>
+                      <span className="w-5 text-center text-sm font-semibold">{rooms[r.key as keyof RoomComposition] as number}</span>
+                      <button type="button" onClick={() => updateRoomCount(r.key as keyof RoomComposition, 1)}
+                        className="flex size-7 items-center justify-center rounded-md border border-border text-sm hover:bg-muted">+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-semibold">공용 / 특수 공간</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {ROOM_TOGGLES.map((r) => {
+                  const active = rooms[r.key as keyof RoomComposition] as boolean
+                  return (
+                    <button key={r.key} type="button" onClick={() => toggleRoom(r.key as keyof RoomComposition)} aria-pressed={active}
+                      className={`flex items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors ${active ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{r.label}</span>
+                        <span className="text-xs text-muted-foreground">{r.desc}</span>
+                      </div>
+                      {active && <CheckCircle2 className="size-5 shrink-0 text-primary" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 2 && (
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">마감 등급</CardTitle>
+              <CardDescription>마감등급은 전체 공사비에 가장 큰 영향을 미칩니다.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              {FINISH_GRADES.map((f) => {
+                const selected = finishGrade === f.value
+                return (
+                  <button key={f.value} type="button" onClick={() => setFinishGrade(f.value)} aria-pressed={selected}
+                    className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                    <span className="flex items-center justify-between">
+                      <span className="font-semibold">{f.label}</span>
+                      <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{f.tag}</span>
+                    </span>
+                    <span className="text-xs leading-relaxed text-muted-foreground">{f.desc}</span>
+                  </button>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">포함 공종 선택</CardTitle>
+              <CardDescription>건식벽체·유리벽체 등 기본 6개 공종은 마감비에 이미 포함되어 있습니다. 추가로 필요한 공종을 선택하세요.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {RECOMMENDED_WORK_TYPES.map((w) => (
+                  <div key={w.key} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3 opacity-80">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{w.label}</span>
+                      <span className="text-xs text-muted-foreground">{w.desc}</span>
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">포함</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                {OPTIONAL_WORK_TYPES.map((w) => {
+                  const active = workTypes.has(w.key)
+                  return (
+                    <button key={w.key} type="button" onClick={() => toggleWorkType(w.key)} aria-pressed={active}
+                      className={`flex items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors ${active ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{w.label}</span>
+                        <span className="text-xs text-muted-foreground">{w.desc}</span>
+                      </div>
+                      {active && <CheckCircle2 className="size-5 shrink-0 text-primary" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {step === 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">공사 시간대</CardTitle>
+            <CardDescription>야간 공사는 노무비 할증이 발생합니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {CONSTRUCTION_TIMES.map((t) => {
+              const selected = constructionTime === t.value
+              return (
+                <button key={t.value} type="button" onClick={() => setConstructionTime(t.value)} aria-pressed={selected}
+                  className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                  <span className="flex items-center justify-between">
+                    <span className="font-semibold">{t.label}</span>
+                    <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>
+                      {t.modifier > 0 ? `+${Math.round(t.modifier * 100)}%` : "기준"}
+                    </span>
+                  </span>
+                  <span className="text-xs leading-relaxed text-muted-foreground">{t.desc}</span>
+                </button>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 4 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">연락처</CardTitle>
+            <CardDescription>입력하신 정보는 상세 견적서 발송 및 상담 목적으로만 활용됩니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="companyName">회사명</Label>
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="(주)드로잉디자인" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="position">직급 / 직책</Label>
+                <Input id="position" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="대리" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email">이메일</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
+              <p className="text-xs text-muted-foreground">담당자가 이 이메일로 상세 견적서를 보내드립니다</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="phone">연락처</Label>
+              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="010-0000-0000" />
+            </div>
+
+            <button type="button" onClick={() => setConsent((c) => !c)}
+              className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/30 p-3 text-left">
+              <span className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border ${consent ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+                {consent && <CheckCircle2 className="size-4" />}
+              </span>
+              <span className="text-xs leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground">개인정보 수집 및 이용에 동의합니다. (필수)</span>
+                <br />
+                수집 항목: 회사명, 직급, 이메일, 전화번호 / 목적: 견적서 발송 및 상담 / 보유: 3년
+              </span>
+            </button>
+
+            {errorMsg && <p className="rounded-md bg-destructive/10 p-2.5 text-sm text-destructive">{errorMsg}</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      {stepError && <p className="rounded-md bg-destructive/10 p-2.5 text-sm text-destructive">{stepError}</p>}
+
+      <div className="flex items-center justify-between gap-3">
+        <Button type="button" variant="outline" onClick={goPrev} disabled={step === 0}>
+          <ArrowLeft className="size-4" />
+          이전
+        </Button>
+        {step < STEPS.length - 1 ? (
+          <Button type="button" onClick={goNext}>
+            다음 단계
+            <ArrowRight className="size-4" />
+          </Button>
+        ) : (
+          <Button type="button" onClick={handleFinalSubmit} disabled={submitting}>
+            {submitting ? "생성 중..." : "📊 견적서 생성하기"}
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
