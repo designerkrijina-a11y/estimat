@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Building2, Users, Sparkles, Hammer, CheckCircle2, ArrowLeft, ArrowRight, Printer } from "lucide-react"
+import { Building2, Users, CheckCircle2, ArrowLeft, ArrowRight, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,62 +15,70 @@ const BRAND = "#145ce6"
 const STEPS = ["기본 정보", "공간 구성", "공종 선택", "추가 질문", "연락처"] as const
 
 const BUILDING_GRADES = [
-  { value: "A", label: "A급 프리미엄", desc: "앵커원·파르나스·서울스퀘어 등 초고층 프라임 오피스", modifier: 0.28 },
-  { value: "B", label: "B급 일반 오피스", desc: "ISUFIVE·지식산업센터 등 표준 오피스 건물", modifier: 0 },
-  { value: "C", label: "C급 일반 건물", desc: "구형 상가·공장 사옥·지방 오피스 등", modifier: -0.05 },
+  { value: "A", icon: "🏆", label: "A급 프리미엄", desc: "앵커원·파르나스·서울스퀘어 등 초고층 프라임 오피스", modifier: 0.28 },
+  { value: "B", icon: "🏢", label: "B급 일반 오피스", desc: "ISUFIVE·지식산업센터 등 표준 오피스 건물", modifier: 0 },
+  { value: "C", icon: "🏗️", label: "C급 일반 건물", desc: "구형 상가·공장 사옥·지방 오피스 등", modifier: -0.05 },
 ] as const
 
 const CONSTRUCTION_TYPES = [
-  { value: "신규", label: "신규 인테리어", desc: "기존 내장재 없이 새로 시공", icon: Sparkles },
-  { value: "리모델링", label: "리모델링", desc: "기존 인테리어 철거 후 재시공", icon: Hammer },
+  { value: "신규", icon: "✨", label: "신규 인테리어", desc: "기존 내장재 없이 새로 시공" },
+  { value: "리모델링", icon: "🔄", label: "리모델링", desc: "기존 인테리어 철거 후 재시공" },
 ] as const
 
 const FINISH_GRADES = [
-  { value: "초급", label: "초급 마감", tag: "절감형", desc: "노출천정 도장·LVT 바닥·합판도어·기본 칸막이", modifier: 0.8 },
-  { value: "중급", label: "중급 마감", tag: "기본형", desc: "석고천정·LVT+카펫·유리파티션·방염벽지", modifier: 1.0 },
-  { value: "고급", label: "고급 마감", tag: "×1.35", desc: "목모보드/바리솔·특수도장·디자인조명", modifier: 1.35 },
-  { value: "프리미엄", label: "프리미엄 마감", tag: "×1.8", desc: "전 공정 최고급·대리석·바리솔 전체", modifier: 1.8 },
+  { value: "초급", dot: "🟡", label: "초급 마감", tag: "절감형", desc: "노출천정 도장·LVT 바닥·합판도어·기본 칸막이", modifier: 0.8 },
+  { value: "중급", dot: "🔵", label: "중급 마감", tag: "기본형", desc: "석고천정·LVT+카펫·유리파티션·방염벽지", modifier: 1.0 },
+  { value: "고급", dot: "🟣", label: "고급 마감", tag: "×1.35", desc: "목모보드/바리솔·특수도장·디자인조명", modifier: 1.35 },
+  { value: "프리미엄", dot: "🔴", label: "프리미엄 마감", tag: "×1.8", desc: "전 공정 최고급·대리석·바리솔 전체", modifier: 1.8 },
 ] as const
 
 const RECOMMENDED_WORK_TYPES = [
-  { key: "dryWall", label: "건식벽체", desc: "경량칸막이·단열재·석고보드" },
-  { key: "glassWall", label: "유리벽체", desc: "10T 강화유리+ST'L 프레임" },
-  { key: "paintWall", label: "수벽공사", desc: "석고+도장 마감 벽체" },
-  { key: "electrical", label: "전기공사", desc: "전등·전열·소방전기·동력" },
-  { key: "mechanical", label: "설비공사", desc: "소화배관·공조덕트·위생배관" },
-  { key: "signage", label: "실명 사인", desc: "실명·메인로고·라운지사인" },
+  { key: "dryWall", icon: "🧱", label: "건식벽체", desc: "경량칸막이·단열재·석고보드" },
+  { key: "glassWall", icon: "🪟", label: "유리벽체", desc: "10T 강화유리+ST'L 프레임" },
+  { key: "paintWall", icon: "🎨", label: "수벽공사", desc: "석고+도장 마감 벽체" },
+  { key: "electrical", icon: "⚡", label: "전기공사", desc: "전등·전열·소방전기·동력" },
+  { key: "mechanical", icon: "🚿", label: "설비공사", desc: "소화배관·공조덕트·위생배관" },
+  { key: "signage", icon: "🔖", label: "실명 사인", desc: "실명·메인로고·라운지사인" },
 ] as const
 
 const OPTIONAL_WORK_TYPES = [
-  { key: "demolition", label: "철거공사", desc: "기존 마감재 철거 (리모델링 시)" },
-  { key: "relocation", label: "기업이전", desc: "이사·포장·운반 (인원수 기반 자동 산출)" },
-  { key: "hvac", label: "냉난방기공사", desc: "시스템에어컨 실내외기+배관" },
-  { key: "network", label: "통신공사", desc: "CAT-6 케이블링·무선AP·패치패널" },
-  { key: "av", label: "영상장비 및 AV", desc: "모니터·화상회의·음향" },
-  { key: "furniture", label: "사무가구 구매", desc: "책상·의자·스토리지" },
+  { key: "demolition", icon: "🔨", label: "철거공사", desc: "기존 마감재 철거 (리모델링 시)" },
+  { key: "relocation", icon: "🚚", label: "기업이전", desc: "이사·포장·운반 (인원수 기반 자동 산출)" },
+  { key: "hvac", icon: "❄️", label: "냉난방기공사", desc: "시스템에어컨 실내외기+배관" },
+  { key: "network", icon: "📡", label: "통신공사", desc: "CAT-6 케이블링·무선AP·패치패널" },
+  { key: "av", icon: "📺", label: "영상장비 및 AV", desc: "모니터·화상회의·음향" },
+  { key: "furniture", icon: "🪑", label: "사무가구 구매", desc: "책상·의자·스토리지" },
 ] as const
 
 const CONSTRUCTION_TIMES = [
-  { value: "주간", label: "주간 공사", desc: "평일 09:00~18:00 기준 (기본 단가)", modifier: 0 },
-  { value: "부분야간", label: "부분 야간", desc: "소음·분진 작업만 야간 (노무비 +15%)", modifier: 0.15 },
-  { value: "전면야간", label: "전면 야간", desc: "평일 22:00~익일 06:00 (노무비 +32%)", modifier: 0.32 },
-  { value: "주말야간", label: "주말·고강도 야간", desc: "주말 주야간 + 평일 야간 (노무비 +50%)", modifier: 0.5 },
+  { value: "주간", icon: "☀️", label: "주간 공사", desc: "평일 09:00~18:00 기준 (기본 단가)", modifier: 0 },
+  { value: "부분야간", icon: "🌆", label: "부분 야간", desc: "소음·분진 작업만 야간 (노무비 +15%)", modifier: 0.15 },
+  { value: "전면야간", icon: "🌙", label: "전면 야간", desc: "평일 22:00~익일 06:00 (노무비 +32%)", modifier: 0.32 },
+  { value: "주말야간", icon: "🌃", label: "주말·고강도 야간", desc: "주말 주야간 + 평일 야간 (노무비 +50%)", modifier: 0.5 },
 ] as const
 
-const ROOM_COUNTERS = [
-  { key: "executive", label: "임원 공간", desc: "대표이사실 / 임원실 — 독립 공간으로 별도 설계", price: 8_000_000 },
-  { key: "meetingLarge", label: "대회의실", desc: "15~20인, ~35㎡, 폴딩도어 포함", price: 15_000_000 },
-  { key: "meetingMid", label: "중회의실", desc: "6~12인, ~13㎡", price: 7_000_000 },
-  { key: "meetingSmall", label: "소회의실", desc: "2~5인, ~10㎡", price: 4_000_000 },
-  { key: "phoneBooth", label: "1인 작업실 / 폰부스", desc: "~4㎡ 소형 독립공간", price: 2_000_000 },
-  { key: "storage", label: "창고", desc: "~12㎡ 기준", price: 1_500_000 },
+const EXECUTIVE_ROOMS = [
+  { key: "executive", icon: "👔", label: "대표이사실 / 임원실", desc: "독립 공간으로 별도 설계 (개수만큼 추가)", price: 8_000_000 },
 ] as const
+
+const MEETING_ROOMS = [
+  { key: "meetingLarge", icon: "🏛️", label: "대회의실", desc: "15~20인, ~35㎡, 폴딩도어 포함", price: 15_000_000 },
+  { key: "meetingMid", icon: "🤝", label: "중회의실", desc: "6~12인, ~13㎡", price: 7_000_000 },
+  { key: "meetingSmall", icon: "💬", label: "소회의실", desc: "2~5인, ~10㎡", price: 4_000_000 },
+] as const
+
+const SMALL_ROOMS = [
+  { key: "phoneBooth", icon: "🚪", label: "1인 작업실 / 폰부스", desc: "~4㎡ 소형 독립공간", price: 2_000_000 },
+  { key: "storage", icon: "📦", label: "창고", desc: "~12㎡ 기준", price: 1_500_000 },
+] as const
+
+const ROOM_COUNTERS = [...EXECUTIVE_ROOMS, ...MEETING_ROOMS, ...SMALL_ROOMS]
 
 const ROOM_TOGGLES = [
-  { key: "lounge", label: "라운지 / 캔틴", desc: "휴게+미팅 복합 공간", price: 18_000_000 },
-  { key: "studio", label: "스튜디오 / 촬영실", desc: "LED·라운드벽체 특수 마감", price: 25_000_000 },
-  { key: "oaRoom", label: "OA실 / 탕비실", desc: "싱크대·상부장 제작가구", price: 6_000_000 },
-  { key: "serverRoom", label: "서버룸", desc: "항온항습·청정소화 별도", price: 10_000_000 },
+  { key: "lounge", icon: "☕", label: "라운지 / 캔틴", desc: "휴게+미팅 복합 공간", price: 18_000_000 },
+  { key: "studio", icon: "🎙️", label: "스튜디오 / 촬영실", desc: "LED·라운드벽체 특수 마감", price: 25_000_000 },
+  { key: "oaRoom", icon: "📦", label: "OA실 / 탕비실", desc: "싱크대·상부장 제작가구", price: 6_000_000 },
+  { key: "serverRoom", icon: "🖥️", label: "서버룸", desc: "항온항습·청정소화 별도", price: 10_000_000 },
 ] as const
 
 const won = new Intl.NumberFormat("ko-KR")
@@ -169,6 +177,14 @@ export function EstimateWizard() {
       else next.add(key)
       return next
     })
+  }
+
+  function selectAllOptional() {
+    setWorkTypes(new Set(OPTIONAL_WORK_TYPES.map((w) => w.key)))
+  }
+
+  function selectNoneOptional() {
+    setWorkTypes(new Set())
   }
 
   function updateRoomCount(key: keyof RoomComposition, delta: number) {
@@ -474,7 +490,7 @@ export function EstimateWizard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Building2 className="size-5 text-primary" />
+                <span className="text-xl">🏢</span>
                 공간 정보
               </CardTitle>
               <CardDescription>전용면적은 평 또는 ㎡ 중 하나만 입력하면 자동 변환됩니다.</CardDescription>
@@ -522,7 +538,10 @@ export function EstimateWizard() {
                   <button key={g.value} type="button" onClick={() => setBuildingGrade(g.value)} aria-pressed={selected}
                     className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
                     <span className="flex items-center justify-between">
-                      <span className="font-semibold">{g.label}</span>
+                      <span className="flex items-center gap-1.5 font-semibold">
+                        <span>{g.icon}</span>
+                        {g.label}
+                      </span>
                       <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{pct}</span>
                     </span>
                     <span className="text-xs leading-relaxed text-muted-foreground">{g.desc}</span>
@@ -540,11 +559,10 @@ export function EstimateWizard() {
             <CardContent className="grid gap-3 sm:grid-cols-2">
               {CONSTRUCTION_TYPES.map((c) => {
                 const selected = constructionType === c.value
-                const Icon = c.icon
                 return (
                   <button key={c.value} type="button" onClick={() => setConstructionType(c.value)} aria-pressed={selected}
                     className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
-                    <Icon className={`mt-0.5 size-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="mt-0.5 text-xl">{c.icon}</span>
                     <span className="flex flex-col gap-1">
                       <span className="font-semibold">{c.label}</span>
                       <span className="text-xs leading-relaxed text-muted-foreground">{c.desc}</span>
@@ -560,42 +578,33 @@ export function EstimateWizard() {
       {step === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">공간 구성</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <span className="text-xl">📐</span>
+              공간 구성
+            </CardTitle>
             <CardDescription>필요한 특수 공간의 개수를 입력하거나 켜주세요.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
-            <div className="flex flex-col gap-3">
-              <p className="text-sm font-semibold">회의실 / 업무 공간</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {ROOM_COUNTERS.map((r) => (
-                  <div key={r.key} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{r.label}</span>
-                      <span className="text-xs text-muted-foreground">{r.desc}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => updateRoomCount(r.key as keyof RoomComposition, -1)}
-                        className="flex size-7 items-center justify-center rounded-md border border-border text-sm hover:bg-muted">−</button>
-                      <span className="w-5 text-center text-sm font-semibold">{rooms[r.key as keyof RoomComposition] as number}</span>
-                      <button type="button" onClick={() => updateRoomCount(r.key as keyof RoomComposition, 1)}
-                        className="flex size-7 items-center justify-center rounded-md border border-border text-sm hover:bg-muted">+</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RoomGroup number={1} title="임원 공간" items={EXECUTIVE_ROOMS} rooms={rooms} onChange={updateRoomCount} />
+            <RoomGroup number={2} title="회의실 구성" items={MEETING_ROOMS} rooms={rooms} onChange={updateRoomCount} />
 
             <div className="flex flex-col gap-3">
-              <p className="text-sm font-semibold">공용 / 특수 공간</p>
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <span className="flex size-5 items-center justify-center rounded-full bg-foreground text-xs text-background">3</span>
+                공용 / 특수 공간
+              </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {ROOM_TOGGLES.map((r) => {
                   const active = rooms[r.key as keyof RoomComposition] as boolean
                   return (
                     <button key={r.key} type="button" onClick={() => toggleRoom(r.key as keyof RoomComposition)} aria-pressed={active}
                       className={`flex items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors ${active ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{r.label}</span>
-                        <span className="text-xs text-muted-foreground">{r.desc}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{r.icon}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{r.label}</span>
+                          <span className="text-xs text-muted-foreground">{r.desc}</span>
+                        </div>
                       </div>
                       {active && <CheckCircle2 className="size-5 shrink-0 text-primary" />}
                     </button>
@@ -603,6 +612,8 @@ export function EstimateWizard() {
                 })}
               </div>
             </div>
+
+            <RoomGroup number={4} title="소형 공간" items={SMALL_ROOMS} rooms={rooms} onChange={updateRoomCount} />
           </CardContent>
         </Card>
       )}
@@ -611,7 +622,10 @@ export function EstimateWizard() {
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">마감 등급</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <span className="text-xl">⚙️</span>
+                마감 등급
+              </CardTitle>
               <CardDescription>마감등급은 전체 공사비에 가장 큰 영향을 미칩니다.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -621,7 +635,10 @@ export function EstimateWizard() {
                   <button key={f.value} type="button" onClick={() => setFinishGrade(f.value)} aria-pressed={selected}
                     className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
                     <span className="flex items-center justify-between">
-                      <span className="font-semibold">{f.label}</span>
+                      <span className="flex items-center gap-1.5 font-semibold">
+                        <span>{f.dot}</span>
+                        {f.label}
+                      </span>
                       <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{f.tag}</span>
                     </span>
                     <span className="text-xs leading-relaxed text-muted-foreground">{f.desc}</span>
@@ -640,13 +657,32 @@ export function EstimateWizard() {
               <div className="grid gap-2 sm:grid-cols-2">
                 {RECOMMENDED_WORK_TYPES.map((w) => (
                   <div key={w.key} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3 opacity-80">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{w.label}</span>
-                      <span className="text-xs text-muted-foreground">{w.desc}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{w.icon}</span>
+                      <div className="flex flex-col">
+                        <span className="flex items-center gap-1.5 text-sm font-medium">
+                          {w.label}
+                          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">권장</span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">{w.desc}</span>
+                      </div>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">포함</span>
+                    <CheckCircle2 className="size-5 shrink-0 text-primary" />
                   </div>
                 ))}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">추가 공종</p>
+                <div className="flex items-center gap-2 text-xs">
+                  <button type="button" onClick={selectAllOptional} className="underline underline-offset-2 hover:text-primary">
+                    전체 선택
+                  </button>
+                  <span className="text-muted-foreground">|</span>
+                  <button type="button" onClick={selectNoneOptional} className="underline underline-offset-2 hover:text-primary">
+                    기본 권장 항목만
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
@@ -655,9 +691,12 @@ export function EstimateWizard() {
                   return (
                     <button key={w.key} type="button" onClick={() => toggleWorkType(w.key)} aria-pressed={active}
                       className={`flex items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors ${active ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{w.label}</span>
-                        <span className="text-xs text-muted-foreground">{w.desc}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{w.icon}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{w.label}</span>
+                          <span className="text-xs text-muted-foreground">{w.desc}</span>
+                        </div>
                       </div>
                       {active && <CheckCircle2 className="size-5 shrink-0 text-primary" />}
                     </button>
@@ -672,7 +711,10 @@ export function EstimateWizard() {
       {step === 3 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">공사 시간대</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <span className="text-xl">💡</span>
+              공사 시간대
+            </CardTitle>
             <CardDescription>야간 공사는 노무비 할증이 발생합니다.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -682,7 +724,10 @@ export function EstimateWizard() {
                 <button key={t.value} type="button" onClick={() => setConstructionTime(t.value)} aria-pressed={selected}
                   className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
                   <span className="flex items-center justify-between">
-                    <span className="font-semibold">{t.label}</span>
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <span>{t.icon}</span>
+                      {t.label}
+                    </span>
                     <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>
                       {t.modifier > 0 ? `+${Math.round(t.modifier * 100)}%` : "기준"}
                     </span>
@@ -698,7 +743,10 @@ export function EstimateWizard() {
       {step === 4 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">연락처</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <span className="text-xl">📋</span>
+              연락처
+            </CardTitle>
             <CardDescription>이메일과 정보를 입력하고 아래 버튼을 누르면 상세 견적서가 바로 화면에 나타납니다.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -755,6 +803,51 @@ export function EstimateWizard() {
             {submitting ? "생성 중..." : "📊 견적서 받기"}
           </Button>
         )}
+      </div>
+    </div>
+  )
+}
+
+function RoomGroup({
+  number,
+  title,
+  items,
+  rooms,
+  onChange,
+}: {
+  number: number
+  title: string
+  items: ReadonlyArray<{ key: string; icon: string; label: string; desc: string; price: number }>
+  rooms: RoomComposition
+  onChange: (key: keyof RoomComposition, delta: number) => void
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <span className="flex size-5 items-center justify-center rounded-full bg-foreground text-xs text-background">
+          {number}
+        </span>
+        {title}
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {items.map((r) => (
+          <div key={r.key} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{r.icon}</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">{r.label}</span>
+                <span className="text-xs text-muted-foreground">{r.desc}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => onChange(r.key as keyof RoomComposition, -1)}
+                className="flex size-7 items-center justify-center rounded-md border border-border text-sm hover:bg-muted">−</button>
+              <span className="w-5 text-center text-sm font-semibold">{rooms[r.key as keyof RoomComposition] as number}</span>
+              <button type="button" onClick={() => onChange(r.key as keyof RoomComposition, 1)}
+                className="flex size-7 items-center justify-center rounded-md border border-border text-sm hover:bg-muted">+</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
