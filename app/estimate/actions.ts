@@ -2,16 +2,35 @@
 
 import { createClient } from "@/lib/supabase/server"
 
+export type RoomComposition = {
+  executive: number
+  meetingLarge: number
+  meetingMid: number
+  meetingSmall: number
+  lounge: boolean
+  studio: boolean
+  oaRoom: boolean
+  serverRoom: boolean
+  phoneBooth: number
+  storage: number
+}
+
 export type EstimateSubmission = {
   pyeong: number
   area_sqm: number
   employee_count: number
   building_grade: "A" | "B" | "C"
   construction_type: "신규" | "리모델링"
+  finish_grade: "초급" | "중급" | "고급" | "프리미엄"
+  construction_time: "주간" | "부분야간" | "전면야간" | "주말야간"
+  included_work_types: string[]
+  room_composition: RoomComposition
   estimated_price: number
-  contact_name: string
+  company_name: string
+  position: string
   contact_phone: string
   contact_email: string
+  privacy_consent: boolean
 }
 
 export async function submitEstimate(input: EstimateSubmission) {
@@ -23,10 +42,15 @@ export async function submitEstimate(input: EstimateSubmission) {
     employee_count: input.employee_count,
     building_grade: input.building_grade,
     construction_type: input.construction_type,
+    finish_grade: input.finish_grade,
+    construction_time: input.construction_time,
+    included_work_types: input.included_work_types,
+    room_composition: input.room_composition,
     estimated_price: input.estimated_price,
-    contact_name: input.contact_name || null,
+    contact_name: input.company_name || null,
     contact_phone: input.contact_phone || null,
     contact_email: input.contact_email || null,
+    privacy_consent: input.privacy_consent,
   })
 
   if (error) {
