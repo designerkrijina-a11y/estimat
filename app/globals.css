@@ -170,6 +170,8 @@
 
   html,
   body {
+    height: auto !important;
+    min-height: 0 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     color-adjust: exact;

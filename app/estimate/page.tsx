@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function EstimatePage() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-background text-foreground print:min-h-0">
       <div className="mx-auto max-w-6xl px-4 py-10 print:py-2 md:px-8">
         <header className="mb-8 flex flex-col gap-2 text-center print:mb-6 print:gap-0.5">
           <p className="text-sm font-medium text-primary print:hidden">오피스 인테리어</p>
