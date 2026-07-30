@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Building2, Users, CheckCircle2, ArrowLeft, ArrowRight, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,6 +31,33 @@ const FINISH_GRADES = [
   { value: "고급", dot: "🟣", label: "고급 마감", tag: "×1.35", desc: "목모보드/바리솔·특수도장·디자인조명", modifier: 1.35 },
   { value: "프리미엄", dot: "🔴", label: "프리미엄 마감", tag: "×1.8", desc: "전 공정 최고급·대리석·바리솔 전체", modifier: 1.8 },
 ] as const
+
+const FINISH_GRADE_IMAGES: Record<string, string[]> = {
+  초급: [
+    "https://images.unsplash.com/photo-1449247709967-d4461a6a6103?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1704655295066-681e61ecca6b?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1705909770198-7e83c24e1616?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1693625700727-b548ca8f5679?auto=format&fit=crop&w=1200&q=80",
+  ],
+  중급: [
+    "https://images.unsplash.com/photo-1715593949273-09009558300a?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1706074797611-a02f9ed06439?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1706074793638-da28b90ea8ae?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1631248055158-edec7a3c072b?auto=format&fit=crop&w=1200&q=80",
+  ],
+  고급: [
+    "https://images.unsplash.com/photo-1699621106755-4fe40ce95d64?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1778731525532-d2ab833c8463?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1778731525509-e1bb04020935?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1783437581569-d10b23df85f5?auto=format&fit=crop&w=1200&q=80",
+  ],
+  프리미엄: [
+    "https://images.unsplash.com/photo-1625244724120-1fd1d34d00f6?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1677129667171-92abd8740fa3?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1718873003411-ea2e7f6fc6f1?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1728488447895-0f0d82299f16?auto=format&fit=crop&w=1200&q=80",
+  ],
+}
 
 const RECOMMENDED_WORK_TYPES = [
   { key: "dryWall", icon: "🧱", label: "건식벽체", desc: "경량칸막이·단열재·석고보드" },
@@ -124,6 +151,59 @@ const initialRooms: RoomComposition = {
   serverRoom: false,
   phoneBooth: 0,
   storage: 1,
+}
+
+function FinishGradeGallery({ grade, label }: { grade: string; label: string }) {
+  const images = FINISH_GRADE_IMAGES[grade] ?? FINISH_GRADE_IMAGES["중급"]
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    setIndex(0)
+  }, [grade])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % images.length)
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [images.length])
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
+      <img
+        src={images[index] || "/placeholder.svg"}
+        alt={`${label} 참고 이미지`}
+        className="h-64 w-full object-cover sm:h-80"
+      />
+      <div className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
+        {label} 미리보기 · {index + 1}/{images.length}
+      </div>
+      <button
+        type="button"
+        onClick={() => setIndex((i) => (i - 1 + images.length) % images.length)}
+        className="absolute left-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-lg text-foreground shadow hover:bg-white"
+        aria-label="이전 이미지"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        onClick={() => setIndex((i) => (i + 1) % images.length)}
+        className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-lg text-foreground shadow hover:bg-white"
+        aria-label="다음 이미지"
+      >
+        ›
+      </button>
+      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+        {images.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 rounded-full transition-all ${i === index ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function EstimateWizard() {
@@ -628,23 +708,29 @@ export function EstimateWizard() {
               </CardTitle>
               <CardDescription>마감등급은 전체 공사비에 가장 큰 영향을 미칩니다.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2">
-              {FINISH_GRADES.map((f) => {
-                const selected = finishGrade === f.value
-                return (
-                  <button key={f.value} type="button" onClick={() => setFinishGrade(f.value)} aria-pressed={selected}
-                    className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
-                    <span className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-semibold">
-                        <span>{f.dot}</span>
-                        {f.label}
+            <CardContent className="flex flex-col gap-4">
+              <FinishGradeGallery
+                grade={finishGrade || "중급"}
+                label={FINISH_GRADES.find((f) => f.value === (finishGrade || "중급"))?.label ?? "마감"}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {FINISH_GRADES.map((f) => {
+                  const selected = finishGrade === f.value
+                  return (
+                    <button key={f.value} type="button" onClick={() => setFinishGrade(f.value)} aria-pressed={selected}
+                      className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                      <span className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 font-semibold">
+                          <span>{f.dot}</span>
+                          {f.label}
+                        </span>
+                        <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{f.tag}</span>
                       </span>
-                      <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{f.tag}</span>
-                    </span>
-                    <span className="text-xs leading-relaxed text-muted-foreground">{f.desc}</span>
-                  </button>
-                )
-              })}
+                      <span className="text-xs leading-relaxed text-muted-foreground">{f.desc}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </CardContent>
           </Card>
 
