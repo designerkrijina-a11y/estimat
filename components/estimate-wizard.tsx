@@ -10,6 +10,7 @@ import { submitEstimate, type RoomComposition } from "@/app/estimate/actions"
 
 const PYEONG_TO_SQM = 3.3
 const FINISH_PRICE_PER_SQM = 350_000
+const BRAND = "#145ce6"
 
 const STEPS = ["기본 정보", "공간 구성", "공종 선택", "추가 질문", "연락처"] as const
 
@@ -311,58 +312,59 @@ export function EstimateWizard() {
           </Button>
         </div>
 
-        {/* Header card */}
-        <Card className="overflow-hidden border-none bg-foreground p-0 text-background">
+        <Card
+          className="overflow-hidden border-none p-0 text-white"
+          style={{ background: `linear-gradient(135deg, #162163, ${BRAND})` }}
+        >
           <CardContent className="flex flex-col gap-6 p-6 md:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex flex-col gap-1">
-                <p className="text-xs font-medium text-background/60">{estimateNumber}</p>
+                <p className="text-xs font-medium text-white/60">{estimateNumber}</p>
                 <h2 className="text-2xl font-bold md:text-3xl">{companyName}</h2>
-                <p className="text-sm text-background/70">오피스 인테리어 Fit Out</p>
-                <p className="mt-1 text-xs text-background/60">
+                <p className="text-sm text-white/70">오피스 인테리어 Fit Out</p>
+                <p className="mt-1 text-xs text-white/60">
                   담당: {position} · {email}
                 </p>
               </div>
-              <div className="text-right text-xs text-background/60">
+              <div className="text-right text-xs text-white/60">
                 <p>발행일 {issueDateStr}</p>
                 <p>유효기간 {validUntilStr}</p>
               </div>
             </div>
 
-            <div className="h-px bg-background/15" />
+            <div className="h-px bg-white/15" />
 
             <div>
-              <p className="text-sm text-background/60">총 공사비 (VAT 별도)</p>
+              <p className="text-sm text-white/60">총 공사비 (VAT 별도)</p>
               <p className="text-3xl font-bold tracking-tight md:text-4xl">₩{won.format(total)}</p>
-              <p className="mt-1 text-sm text-background/60">{numberToKoreanWon(total)}</p>
+              <p className="mt-1 text-sm text-white/60">{numberToKoreanWon(total)}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg bg-background/10 p-3">
-                <p className="text-xs text-background/60">전용면적</p>
+              <div className="rounded-lg bg-white/10 p-3">
+                <p className="text-xs text-white/60">전용면적</p>
                 <p className="text-sm font-semibold">{won.format(pyeongNum)}평</p>
-                <p className="text-xs text-background/50">{won.format(areaSqm)}㎡</p>
+                <p className="text-xs text-white/50">{won.format(areaSqm)}㎡</p>
               </div>
-              <div className="rounded-lg bg-background/10 p-3">
-                <p className="text-xs text-background/60">평당 단가</p>
+              <div className="rounded-lg bg-white/10 p-3">
+                <p className="text-xs text-white/60">평당 단가</p>
                 <p className="text-sm font-semibold">{won.format(Math.round(pricePerPyeong / 10_000))}만원</p>
-                <p className="text-xs text-background/50">원/평</p>
+                <p className="text-xs text-white/50">원/평</p>
               </div>
-              <div className="rounded-lg bg-background/10 p-3">
-                <p className="text-xs text-background/60">마감등급</p>
+              <div className="rounded-lg bg-white/10 p-3">
+                <p className="text-xs text-white/60">마감등급</p>
                 <p className="text-sm font-semibold">{finishGrade || "중급"}</p>
-                <p className="text-xs text-background/50">마감 기준</p>
+                <p className="text-xs text-white/50">마감 기준</p>
               </div>
-              <div className="rounded-lg bg-background/10 p-3">
-                <p className="text-xs text-background/60">포함 공정</p>
+              <div className="rounded-lg bg-white/10 p-3">
+                <p className="text-xs text-white/60">포함 공정</p>
                 <p className="text-sm font-semibold">{includedWorkCount}개</p>
-                <p className="text-xs text-background/50">공정 산출</p>
+                <p className="text-xs text-white/50">공정 산출</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Cost breakdown bars */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">주요 공정 비중</CardTitle>
@@ -373,15 +375,20 @@ export function EstimateWizard() {
               <div key={c.label} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 font-medium">
-                    <span className="flex size-5 items-center justify-center rounded-full bg-foreground text-xs text-background">
+                    <span
+                      className="flex size-5 items-center justify-center rounded-full text-xs text-white"
+                      style={{ backgroundColor: BRAND }}
+                    >
                       {i + 1}
                     </span>
                     {c.label}
                   </span>
-                  <span className="font-semibold">{c.pct.toFixed(1)}%</span>
+                  <span className="font-semibold" style={{ color: BRAND }}>
+                    {c.pct.toFixed(1)}%
+                  </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-foreground" style={{ width: `${c.pct}%` }} />
+                  <div className="h-full rounded-full" style={{ width: `${c.pct}%`, backgroundColor: BRAND }} />
                 </div>
               </div>
             ))}
@@ -391,10 +398,9 @@ export function EstimateWizard() {
           </CardContent>
         </Card>
 
-        {/* Completion notice */}
-        <Card className="border-primary/20 text-center">
+        <Card style={{ borderColor: `${BRAND}33` }} className="text-center">
           <CardContent className="flex flex-col items-center gap-2 py-8">
-            <CheckCircle2 className="size-10 text-primary" />
+            <CheckCircle2 className="size-10" style={{ color: BRAND }} />
             <p className="text-lg font-bold">접수가 완료되었습니다</p>
             <p className="text-sm text-muted-foreground">
               담당자가 견적 내용을 검토 후, 24시간 이내로 {email} 또는 {phone}으로 연락드립니다.
@@ -402,7 +408,6 @@ export function EstimateWizard() {
           </CardContent>
         </Card>
 
-        {/* Estimate basis grid */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">견적 산출 기준</CardTitle>
@@ -424,7 +429,6 @@ export function EstimateWizard() {
           </CardContent>
         </Card>
 
-        {/* Notes */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">참고사항</CardTitle>
