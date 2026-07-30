@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { logout } from "./login/actions"
 
 export const dynamic = "force-dynamic"
 
@@ -69,10 +70,20 @@ export default async function AdminPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
-        <header className="mb-8 flex flex-col gap-2">
-          <p className="text-sm font-medium text-primary">오피스 인테리어</p>
-          <h1 className="text-pretty text-3xl font-bold tracking-tight">견적 요청 관리 보드</h1>
-          <p className="text-muted-foreground">접수된 견적 요청을 최신순으로 확인하세요.</p>
+        <header className="mb-8 flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium text-primary">오피스 인테리어</p>
+            <h1 className="text-pretty text-3xl font-bold tracking-tight">견적 요청 관리 보드</h1>
+            <p className="text-muted-foreground">접수된 견적 요청을 최신순으로 확인하세요.</p>
+          </div>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+            >
+              로그아웃
+            </button>
+          </form>
         </header>
 
         <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
