@@ -75,6 +75,8 @@ const OPTIONAL_WORK_TYPES = [
   { key: "network", icon: "📡", label: "통신공사", desc: "CAT-6 케이블링·무선AP·패치패널" },
   { key: "av", icon: "📺", label: "영상장비 및 AV", desc: "모니터·화상회의·음향" },
   { key: "furniture", icon: "🪑", label: "사무가구 구매", desc: "책상·의자·스토리지" },
+  { key: "serverRoomBuild", icon: "🗄️", label: "서버실 구축", desc: "랙·항온항습·전용 배선 등 IT 인프라 구축" },
+  { key: "customStorage", icon: "🧰", label: "현장 맞춤 제작수납가구", desc: "공간에 맞춰 현장에서 제작하는 붙박이 수납가구" },
 ] as const
 
 const CONSTRUCTION_TIMES = [
@@ -303,6 +305,8 @@ export function EstimateWizard() {
     if (workTypes.has("network")) optionalCost += areaSqm * 12_000
     if (workTypes.has("av")) optionalCost += 4_000_000
     if (workTypes.has("furniture")) optionalCost += employees * 570_000
+    if (workTypes.has("serverRoomBuild")) optionalCost += 6_000_000
+    if (workTypes.has("customStorage")) optionalCost += areaSqm * 20_000
 
     const subtotal = finishBase + buildingAdj + roomsCost + optionalCost
     const timeSurcharge = subtotal * timeMod
@@ -393,7 +397,7 @@ export function EstimateWizard() {
     const pricePerPyeong = pyeongNum > 0 ? Math.round(total / pyeongNum) : 0
 
     return (
-      <div className="mx-auto flex max-w-3xl flex-col gap-4">
+      <div className="mx-auto flex max-w-3xl flex-col gap-4 print:gap-2">
         <div className="flex items-center justify-between print:hidden">
           <button
             type="button"
@@ -412,11 +416,11 @@ export function EstimateWizard() {
           className="overflow-hidden border-none p-0 text-white"
           style={{ background: `linear-gradient(135deg, #162163, ${BRAND})` }}
         >
-          <CardContent className="flex flex-col gap-6 p-6 md:p-8">
+          <CardContent className="flex flex-col gap-6 p-6 print:gap-3 print:p-4 md:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex flex-col gap-1">
                 <p className="text-xs font-medium text-white/60">{estimateNumber}</p>
-                <h2 className="text-2xl font-bold md:text-3xl">{companyName}</h2>
+                <h2 className="text-2xl font-bold print:text-xl md:text-3xl">{companyName}</h2>
                 <p className="text-sm text-white/70">오피스 인테리어 Fit Out</p>
                 <p className="mt-1 text-xs text-white/60">
                   담당: {position} · {email}
@@ -432,27 +436,27 @@ export function EstimateWizard() {
 
             <div>
               <p className="text-sm text-white/60">총 공사비 (VAT 별도)</p>
-              <p className="text-3xl font-bold tracking-tight md:text-4xl">₩{won.format(total)}</p>
+              <p className="text-3xl font-bold tracking-tight print:text-2xl md:text-4xl">₩{won.format(total)}</p>
               <p className="mt-1 text-sm text-white/60">{numberToKoreanWon(total)}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg bg-white/10 p-3">
+            <div className="grid grid-cols-2 gap-3 print:gap-2 sm:grid-cols-4">
+              <div className="rounded-lg bg-white/10 p-3 print:p-2">
                 <p className="text-xs text-white/60">전용면적</p>
                 <p className="text-sm font-semibold">{won.format(pyeongNum)}평</p>
                 <p className="text-xs text-white/50">{won.format(areaSqm)}㎡</p>
               </div>
-              <div className="rounded-lg bg-white/10 p-3">
+              <div className="rounded-lg bg-white/10 p-3 print:p-2">
                 <p className="text-xs text-white/60">평당 단가</p>
                 <p className="text-sm font-semibold">{won.format(Math.round(pricePerPyeong / 10_000))}만원</p>
                 <p className="text-xs text-white/50">원/평</p>
               </div>
-              <div className="rounded-lg bg-white/10 p-3">
+              <div className="rounded-lg bg-white/10 p-3 print:p-2">
                 <p className="text-xs text-white/60">마감등급</p>
                 <p className="text-sm font-semibold">{finishGrade || "중급"}</p>
                 <p className="text-xs text-white/50">마감 기준</p>
               </div>
-              <div className="rounded-lg bg-white/10 p-3">
+              <div className="rounded-lg bg-white/10 p-3 print:p-2">
                 <p className="text-xs text-white/60">포함 공정</p>
                 <p className="text-sm font-semibold">{includedWorkCount}개</p>
                 <p className="text-xs text-white/50">공정 산출</p>
@@ -466,7 +470,7 @@ export function EstimateWizard() {
             <CardTitle className="text-base">주요 공정 비중</CardTitle>
             <CardDescription>전체 항목 중 비중이 큰 상위 {topCategories.length}개</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col gap-4 print:gap-2">
             {topCategories.map((c, i) => (
               <div key={c.label} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-sm">
@@ -495,7 +499,7 @@ export function EstimateWizard() {
         </Card>
 
         <Card style={{ borderColor: `${BRAND}33` }} className="text-center">
-          <CardContent className="flex flex-col items-center gap-2 py-8">
+          <CardContent className="flex flex-col items-center gap-2 py-8 print:py-3">
             <CheckCircle2 className="size-10" style={{ color: BRAND }} />
             <p className="text-lg font-bold">접수가 완료되었습니다</p>
             <p className="text-sm text-muted-foreground">
@@ -803,25 +807,30 @@ export function EstimateWizard() {
             </CardTitle>
             <CardDescription>야간 공사는 노무비 할증이 발생합니다.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            {CONSTRUCTION_TIMES.map((t) => {
-              const selected = constructionTime === t.value
-              return (
-                <button key={t.value} type="button" onClick={() => setConstructionTime(t.value)} aria-pressed={selected}
-                  className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
-                  <span className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <span>{t.icon}</span>
-                      {t.label}
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {CONSTRUCTION_TIMES.map((t) => {
+                const selected = constructionTime === t.value
+                return (
+                  <button key={t.value} type="button" onClick={() => setConstructionTime(t.value)} aria-pressed={selected}
+                    className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
+                    <span className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 font-semibold">
+                        <span>{t.icon}</span>
+                        {t.label}
+                      </span>
+                      <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>
+                        {t.modifier > 0 ? `+${Math.round(t.modifier * 100)}%` : "기준"}
+                      </span>
                     </span>
-                    <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>
-                      {t.modifier > 0 ? `+${Math.round(t.modifier * 100)}%` : "기준"}
-                    </span>
-                  </span>
-                  <span className="text-xs leading-relaxed text-muted-foreground">{t.desc}</span>
-                </button>
-              )
-            })}
+                    <span className="text-xs leading-relaxed text-muted-foreground">{t.desc}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs font-bold leading-relaxed text-amber-700 dark:text-amber-400">
+              💡 건물 내 다른 입주사가 있는 경우, 소음·분진 공사는 야간/주말 진행이 일반적입니다. 이 경우 부분 야간 이상을 선택하세요.
+            </p>
           </CardContent>
         </Card>
       )}
