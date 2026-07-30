@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Building2, Users, Sparkles, Hammer, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react"
+import { Building2, Users, Sparkles, Hammer, CheckCircle2, ArrowLeft, ArrowRight, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -165,7 +165,7 @@ export function EstimateWizard() {
     })
   }
 
-  const { total } = useMemo(() => {
+  const { total, breakdown } = useMemo(() => {
     const finishMod = FINISH_GRADES.find((f) => f.value === finishGrade)?.modifier ?? 1
     const buildingMod = BUILDING_GRADES.find((g) => g.value === buildingGrade)?.modifier ?? 0
     const timeMod = CONSTRUCTION_TIMES.find((t) => t.value === constructionTime)?.modifier ?? 0
@@ -189,8 +189,29 @@ export function EstimateWizard() {
     const timeSurcharge = subtotal * timeMod
     const finalTotal = roundToTenThousand(subtotal + timeSurcharge)
 
-    return { total: finalTotal }
+    return {
+      total: finalTotal,
+      breakdown: { finishBase, buildingAdj, roomsCost, optionalCost, timeSurcharge },
+    }
   }, [areaSqm, employees, finishGrade, buildingGrade, constructionTime, rooms, workTypes])
+
+  const selectedRoomsLabel = useMemo(() => {
+    const parts: string[] = []
+    ROOM_COUNTERS.forEach((r) => {
+      const count = rooms[r.key as keyof RoomComposition] as number
+      if (count > 0) parts.push(`${r.label} ${count}개`)
+    })
+    ROOM_TOGGLES.forEach((r) => {
+      if (rooms[r.key as keyof RoomComposition] as boolean) parts.push(r.label)
+    })
+    return parts.join(", ")
+  }, [rooms])
+
+  const selectedWorkTypesLabel = useMemo(() => {
+    return OPTIONAL_WORK_TYPES.filter((w) => workTypes.has(w.key))
+      .map((w) => w.label)
+      .join(", ")
+  }, [workTypes])
 
   function goNext() {
     setStepError(null)
@@ -245,17 +266,69 @@ export function EstimateWizard() {
 
   if (done) {
     return (
-      <Card className="mx-auto max-w-lg border-primary/20 text-center">
-        <CardContent className="flex flex-col items-center gap-4 py-12">
-          <CheckCircle2 className="size-14 text-primary" />
-          <h2 className="text-xl font-bold">견적서가 생성되었습니다</h2>
-          <p className="text-muted-foreground">담당자가 확인 후 빠르게 연락드리겠습니다.</p>
-          <div className="mt-2 w-full rounded-lg border border-border bg-muted/40 p-5 text-left">
-            <p className="text-sm text-muted-foreground">예상 견적 금액</p>
-            <p className="text-2xl font-bold text-primary">{won.format(total)}원</p>
+      <div className="mx-auto flex max-w-2xl flex-col gap-4">
+        <div className="flex items-center justify-between print:hidden">
+          <div className="flex items-center gap-2 text-primary">
+            <CheckCircle2 className="size-6" />
+            <h2 className="text-xl font-bold text-foreground">상세 견적서</h2>
           </div>
-        </CardContent>
-      </Card>
+          <Button type="button" variant="outline" onClick={() => window.print()}>
+            <Printer className="size-4" />
+            인쇄하기
+          </Button>
+        </div>
+
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardDescription>
+              {companyName} · {position}
+            </CardDescription>
+            <CardTitle className="text-3xl font-bold tracking-tight text-primary">{won.format(total)}원</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {won.format(pyeongNum)}평 ({won.format(areaSqm)}㎡) · 직원 {employees}명 · {buildingGrade}급 ·{" "}
+              {constructionType} · {finishGrade} 마감
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <dl className="flex flex-col gap-2.5 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">마감 공사비 (기본)</dt>
+                <dd>{won.format(Math.round(breakdown.finishBase))}원</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">건물 등급 조정</dt>
+                <dd>{won.format(Math.round(breakdown.buildingAdj))}원</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">공간 구성 추가비</dt>
+                <dd>{won.format(Math.round(breakdown.roomsCost))}원</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">추가 공종비</dt>
+                <dd>{won.format(Math.round(breakdown.optionalCost))}원</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">공사 시간대 할증</dt>
+                <dd>{won.format(Math.round(breakdown.timeSurcharge))}원</dd>
+              </div>
+              <div className="mt-1 flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
+                <dt>합계</dt>
+                <dd className="text-primary">{won.format(total)}원</dd>
+              </div>
+            </dl>
+
+            <div className="rounded-md bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
+              <p>선택한 공간: {selectedRoomsLabel || "없음"}</p>
+              <p className="mt-1">선택한 추가 공종: {selectedWorkTypesLabel || "없음"}</p>
+            </div>
+
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              본 견적은 입력 정보를 바탕으로 한 예상 금액이며, 실제 현장 조사 후 확정됩니다. 담당자가 {email}로 상세
+              내용을 안내드립니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -507,7 +580,7 @@ export function EstimateWizard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">연락처</CardTitle>
-            <CardDescription>입력하신 정보는 상세 견적서 발송 및 상담 목적으로만 활용됩니다.</CardDescription>
+            <CardDescription>이메일과 정보를 입력하고 아래 버튼을 누르면 상세 견적서가 바로 화면에 나타납니다.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -561,7 +634,7 @@ export function EstimateWizard() {
           </Button>
         ) : (
           <Button type="button" onClick={handleFinalSubmit} disabled={submitting}>
-            {submitting ? "생성 중..." : "📊 견적서 생성하기"}
+            {submitting ? "생성 중..." : "📊 견적서 받기"}
           </Button>
         )}
       </div>
