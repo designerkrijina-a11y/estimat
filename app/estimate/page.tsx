@@ -1,11 +1,19 @@
 import { EstimateWizard } from "@/components/estimate-wizard"
+import { createClient } from "@/lib/supabase/server"
+import { DEFAULT_PRICING, mergePricing } from "@/lib/pricing"
+
+export const dynamic = "force-dynamic"
 
 export const metadata = {
   title: "오피스 인테리어 견적 계산기",
   description: "5단계로 공간 정보, 마감등급, 공종을 선택하면 상세 견적서를 확인할 수 있습니다.",
 }
 
-export default function EstimatePage() {
+export default async function EstimatePage() {
+  const supabase = await createClient()
+  const { data } = await supabase.from("pricing_config").select("config").eq("id", 1).single()
+  const pricing = data?.config ? mergePricing(data.config) : DEFAULT_PRICING
+
   return (
     <main className="min-h-screen bg-background text-foreground print:min-h-0">
       <div className="mx-auto max-w-6xl px-4 py-10 print:py-2 md:px-8">
@@ -17,7 +25,7 @@ export default function EstimatePage() {
             확정됩니다.
           </p>
         </header>
-        <EstimateWizard />
+        <EstimateWizard pricing={pricing} />
       </div>
     </main>
   )

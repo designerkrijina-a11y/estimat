@@ -7,17 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { submitEstimate, type RoomComposition } from "@/app/estimate/actions"
+import { DEFAULT_PRICING, type PricingConfig } from "@/lib/pricing"
 
 const PYEONG_TO_SQM = 3.3
-const FINISH_PRICE_PER_SQM = 350_000
 const BRAND = "#145ce6"
 
 const STEPS = ["기본 정보", "공간 구성", "공종 선택", "추가 질문", "연락처"] as const
 
 const BUILDING_GRADES = [
-  { value: "A", icon: "🏆", label: "A급 프리미엄", desc: "앵커원·파르나스·서울스퀘어 등 초고층 프라임 오피스", modifier: 0.28 },
-  { value: "B", icon: "🏢", label: "B급 일반 오피스", desc: "ISUFIVE·지식산업센터 등 표준 오피스 건물", modifier: 0 },
-  { value: "C", icon: "🏗️", label: "C급 일반 건물", desc: "구형 상가·공장 사옥·지방 오피스 등", modifier: -0.05 },
+  { value: "A", icon: "🏆", label: "A급 프리미엄", desc: "앵커원·파르나스·서울스퀘어 등 초고층 프라임 오피스" },
+  { value: "B", icon: "🏢", label: "B급 일반 오피스", desc: "ISUFIVE·지식산업센터 등 표준 오피스 건물" },
+  { value: "C", icon: "🏗️", label: "C급 일반 건물", desc: "구형 상가·공장 사옥·지방 오피스 등" },
 ] as const
 
 const CONSTRUCTION_TYPES = [
@@ -26,10 +26,10 @@ const CONSTRUCTION_TYPES = [
 ] as const
 
 const FINISH_GRADES = [
-  { value: "초급", dot: "🟡", label: "초급 마감", tag: "절감형", desc: "노출천정 도장·LVT 바닥·합판도어·기본 칸막이", modifier: 0.8 },
-  { value: "중급", dot: "🔵", label: "중급 마감", tag: "기본형", desc: "석고천정·LVT+카펫·유리파티션·방염벽지", modifier: 1.0 },
-  { value: "고급", dot: "🟣", label: "고급 마감", tag: "×1.35", desc: "목모보드/바리솔·특수도장·디자인조명", modifier: 1.35 },
-  { value: "프리미엄", dot: "🔴", label: "프리미엄 마감", tag: "×1.8", desc: "전 공정 최고급·대리석·바리솔 전체", modifier: 1.8 },
+  { value: "초급", dot: "🟡", label: "초급 마감", desc: "노출천정 도장·LVT 바닥·합판도어·기본 칸막이" },
+  { value: "중급", dot: "🔵", label: "중급 마감", desc: "석고천정·LVT+카펫·유리파티션·방염벽지" },
+  { value: "고급", dot: "🟣", label: "고급 마감", desc: "목모보드/바리솔·특수도장·디자인조명" },
+  { value: "프리미엄", dot: "🔴", label: "프리미엄 마감", desc: "전 공정 최고급·대리석·바리솔 전체" },
 ] as const
 
 const FINISH_GRADE_IMAGES: Record<string, string[]> = {
@@ -80,34 +80,34 @@ const OPTIONAL_WORK_TYPES = [
 ] as const
 
 const CONSTRUCTION_TIMES = [
-  { value: "주간", icon: "☀️", label: "주간 공사", desc: "평일 09:00~18:00 기준 (기본 단가)", modifier: 0 },
-  { value: "부분야간", icon: "🌆", label: "부분 야간", desc: "소음·분진 작업만 야간 (노무비 +15%)", modifier: 0.15 },
-  { value: "전면야간", icon: "🌙", label: "전면 야간", desc: "평일 22:00~익일 06:00 (노무비 +32%)", modifier: 0.32 },
-  { value: "주말야간", icon: "🌃", label: "주말·고강도 야간", desc: "주말 주야간 + 평일 야간 (노무비 +50%)", modifier: 0.5 },
+  { value: "주간", icon: "☀️", label: "주간 공사", desc: "평일 09:00~18:00 기준 (기본 단가)" },
+  { value: "부분야간", icon: "🌆", label: "부분 야간", desc: "소음·분진 작업만 야간 (노무비 할증)" },
+  { value: "전면야간", icon: "🌙", label: "전면 야간", desc: "평일 22:00~익일 06:00 (노무비 할증)" },
+  { value: "주말야간", icon: "🌃", label: "주말·고강도 야간", desc: "주말 주야간 + 평일 야간 (노무비 할증)" },
 ] as const
 
 const EXECUTIVE_ROOMS = [
-  { key: "executive", icon: "👔", label: "대표이사실 / 임원실", desc: "독립 공간으로 별도 설계 (개수만큼 추가)", price: 8_000_000 },
+  { key: "executive", icon: "👔", label: "대표이사실 / 임원실", desc: "독립 공간으로 별도 설계 (개수만큼 추가)" },
 ] as const
 
 const MEETING_ROOMS = [
-  { key: "meetingLarge", icon: "🏛️", label: "대회의실", desc: "15~20인, ~35㎡, 폴딩도어 포함", price: 15_000_000 },
-  { key: "meetingMid", icon: "🤝", label: "중회의실", desc: "6~12인, ~13㎡", price: 7_000_000 },
-  { key: "meetingSmall", icon: "💬", label: "소회의실", desc: "2~5인, ~10㎡", price: 4_000_000 },
+  { key: "meetingLarge", icon: "🏛️", label: "대회의실", desc: "15~20인, ~35㎡, 폴딩도어 포함" },
+  { key: "meetingMid", icon: "🤝", label: "중회의실", desc: "6~12인, ~13㎡" },
+  { key: "meetingSmall", icon: "💬", label: "소회의실", desc: "2~5인, ~10㎡" },
 ] as const
 
 const SMALL_ROOMS = [
-  { key: "phoneBooth", icon: "🚪", label: "1인 작업실 / 폰부스", desc: "~4㎡ 소형 독립공간", price: 2_000_000 },
-  { key: "storage", icon: "📦", label: "창고", desc: "~12㎡ 기준", price: 1_500_000 },
+  { key: "phoneBooth", icon: "🚪", label: "1인 작업실 / 폰부스", desc: "~4㎡ 소형 독립공간" },
+  { key: "storage", icon: "📦", label: "창고", desc: "~12㎡ 기준" },
 ] as const
 
 const ROOM_COUNTERS = [...EXECUTIVE_ROOMS, ...MEETING_ROOMS, ...SMALL_ROOMS]
 
 const ROOM_TOGGLES = [
-  { key: "lounge", icon: "☕", label: "라운지 / 캔틴", desc: "휴게+미팅 복합 공간", price: 18_000_000 },
-  { key: "studio", icon: "🎙️", label: "스튜디오 / 촬영실", desc: "LED·라운드벽체 특수 마감", price: 25_000_000 },
-  { key: "oaRoom", icon: "📦", label: "OA실 / 탕비실", desc: "싱크대·상부장 제작가구", price: 6_000_000 },
-  { key: "serverRoom", icon: "🖥️", label: "서버룸", desc: "항온항습·청정소화 별도", price: 10_000_000 },
+  { key: "lounge", icon: "☕", label: "라운지 / 캔틴", desc: "휴게+미팅 복합 공간" },
+  { key: "studio", icon: "🎙️", label: "스튜디오 / 촬영실", desc: "LED·라운드벽체 특수 마감" },
+  { key: "oaRoom", icon: "📦", label: "OA실 / 탕비실", desc: "싱크대·상부장 제작가구" },
+  { key: "serverRoom", icon: "🖥️", label: "서버룸", desc: "항온항습·청정소화 별도" },
 ] as const
 
 const won = new Intl.NumberFormat("ko-KR")
@@ -137,27 +137,41 @@ type EstimateContext = {
   workTypes: Set<string>
 }
 
-function computeEstimateForGrade(gradeValue: string, ctx: EstimateContext) {
-  const finishMod = FINISH_GRADES.find((f) => f.value === gradeValue)?.modifier ?? 1
-  const buildingMod = BUILDING_GRADES.find((g) => g.value === ctx.buildingGrade)?.modifier ?? 0
-  const timeMod = CONSTRUCTION_TIMES.find((t) => t.value === ctx.constructionTime)?.modifier ?? 0
+function computeEstimateForGrade(gradeValue: string, ctx: EstimateContext, pricing: PricingConfig) {
+  const finishMod = pricing.finishGradeModifiers[gradeValue as keyof PricingConfig["finishGradeModifiers"]] ?? 1
+  const buildingMod =
+    pricing.buildingGradeModifiers[ctx.buildingGrade as keyof PricingConfig["buildingGradeModifiers"]] ?? 0
+  const timeMod = pricing.timeModifiers[ctx.constructionTime as keyof PricingConfig["timeModifiers"]] ?? 0
 
-  const finishBase = ctx.areaSqm * FINISH_PRICE_PER_SQM * finishMod
+  const finishBase = ctx.areaSqm * pricing.finishPricePerSqm * finishMod
   const buildingAdj = finishBase * buildingMod
 
   const roomsCost =
-    ROOM_COUNTERS.reduce((sum, r) => sum + (ctx.rooms[r.key as keyof RoomComposition] as number) * r.price, 0) +
-    ROOM_TOGGLES.reduce((sum, r) => sum + ((ctx.rooms[r.key as keyof RoomComposition] as boolean) ? r.price : 0), 0)
+    ROOM_COUNTERS.reduce(
+      (sum, r) =>
+        sum +
+        (ctx.rooms[r.key as keyof RoomComposition] as number) *
+          pricing.roomPrices[r.key as keyof PricingConfig["roomPrices"]],
+      0
+    ) +
+    ROOM_TOGGLES.reduce(
+      (sum, r) =>
+        sum +
+        ((ctx.rooms[r.key as keyof RoomComposition] as boolean)
+          ? pricing.roomPrices[r.key as keyof PricingConfig["roomPrices"]]
+          : 0),
+      0
+    )
 
   let optionalCost = 0
-  if (ctx.workTypes.has("demolition")) optionalCost += ctx.areaSqm * 15_570
-  if (ctx.workTypes.has("acoustic")) optionalCost += ctx.areaSqm * 15_000
-  if (ctx.workTypes.has("hvac")) optionalCost += ctx.areaSqm * 25_000
-  if (ctx.workTypes.has("network")) optionalCost += ctx.areaSqm * 12_000
-  if (ctx.workTypes.has("av")) optionalCost += 4_000_000
-  if (ctx.workTypes.has("furniture")) optionalCost += ctx.employees * 570_000
-  if (ctx.workTypes.has("serverRoomBuild")) optionalCost += 6_000_000
-  if (ctx.workTypes.has("customStorage")) optionalCost += ctx.areaSqm * 20_000
+  if (ctx.workTypes.has("demolition")) optionalCost += ctx.areaSqm * pricing.optionalWork.demolitionPerSqm
+  if (ctx.workTypes.has("acoustic")) optionalCost += ctx.areaSqm * pricing.optionalWork.acousticPerSqm
+  if (ctx.workTypes.has("hvac")) optionalCost += ctx.areaSqm * pricing.optionalWork.hvacPerSqm
+  if (ctx.workTypes.has("network")) optionalCost += ctx.areaSqm * pricing.optionalWork.networkPerSqm
+  if (ctx.workTypes.has("av")) optionalCost += pricing.optionalWork.avFlat
+  if (ctx.workTypes.has("furniture")) optionalCost += ctx.employees * pricing.optionalWork.furniturePerEmployee
+  if (ctx.workTypes.has("serverRoomBuild")) optionalCost += pricing.optionalWork.serverRoomBuildFlat
+  if (ctx.workTypes.has("customStorage")) optionalCost += ctx.areaSqm * pricing.optionalWork.customStoragePerSqm
 
   const subtotal = finishBase + buildingAdj + roomsCost + optionalCost
   const timeSurcharge = subtotal * timeMod
@@ -263,7 +277,7 @@ function FinishGradeGallery({ grade, label }: { grade: string; label: string }) 
   )
 }
 
-export function EstimateWizard() {
+export function EstimateWizard({ pricing = DEFAULT_PRICING }: { pricing?: PricingConfig }) {
   const [step, setStep] = useState(0)
 
   const [pyeong, setPyeong] = useState("50")
@@ -357,8 +371,8 @@ export function EstimateWizard() {
   const estimates = useMemo(() => {
     const ctx: EstimateContext = { areaSqm, employees, buildingGrade, constructionTime, rooms, workTypes }
     const grades = finishGrades.size > 0 ? Array.from(finishGrades) : ["중급" as FinishGrade]
-    return grades.map((g) => computeEstimateForGrade(g, ctx))
-  }, [areaSqm, employees, buildingGrade, constructionTime, rooms, workTypes, finishGrades])
+    return grades.map((g) => computeEstimateForGrade(g, ctx, pricing))
+  }, [areaSqm, employees, buildingGrade, constructionTime, rooms, workTypes, finishGrades, pricing])
 
   const { issueDateStr, validUntilStr } = useMemo(() => {
     const now = new Date()
@@ -662,7 +676,8 @@ export function EstimateWizard() {
             <CardContent className="grid gap-3 sm:grid-cols-3">
               {BUILDING_GRADES.map((g) => {
                 const selected = buildingGrade === g.value
-                const pct = g.modifier > 0 ? `+${Math.round(g.modifier * 100)}%` : g.modifier < 0 ? `${Math.round(g.modifier * 100)}%` : "기준"
+                const mod = pricing.buildingGradeModifiers[g.value]
+                const pct = mod > 0 ? `+${Math.round(mod * 100)}%` : mod < 0 ? `${Math.round(mod * 100)}%` : "기준"
                 return (
                   <button key={g.value} type="button" onClick={() => setBuildingGrade(g.value)} aria-pressed={selected}
                     className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
@@ -767,6 +782,8 @@ export function EstimateWizard() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {FINISH_GRADES.map((f) => {
                   const selected = finishGrades.has(f.value)
+                  const mod = pricing.finishGradeModifiers[f.value]
+                  const tag = mod === 1 ? "기준" : `×${mod}`
                   return (
                     <button key={f.value} type="button" onClick={() => toggleFinishGrade(f.value)} aria-pressed={selected}
                       className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
@@ -776,7 +793,7 @@ export function EstimateWizard() {
                           {f.label}
                           {selected && <CheckCircle2 className="size-4 text-primary" />}
                         </span>
-                        <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{f.tag}</span>
+                        <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{tag}</span>
                       </span>
                       <span className="text-xs leading-relaxed text-muted-foreground">{f.desc}</span>
                     </button>
@@ -859,6 +876,7 @@ export function EstimateWizard() {
             <div className="grid gap-3 sm:grid-cols-2">
               {CONSTRUCTION_TIMES.map((t) => {
                 const selected = constructionTime === t.value
+                const mod = pricing.timeModifiers[t.value]
                 return (
                   <button key={t.value} type="button" onClick={() => setConstructionTime(t.value)} aria-pressed={selected}
                     className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
@@ -868,7 +886,7 @@ export function EstimateWizard() {
                         {t.label}
                       </span>
                       <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>
-                        {t.modifier > 0 ? `+${Math.round(t.modifier * 100)}%` : "기준"}
+                        {mod > 0 ? `+${Math.round(mod * 100)}%` : "기준"}
                       </span>
                     </span>
                     <span className="text-xs leading-relaxed text-muted-foreground">{t.desc}</span>
@@ -960,7 +978,7 @@ function RoomGroup({
 }: {
   number: number
   title: string
-  items: ReadonlyArray<{ key: string; icon: string; label: string; desc: string; price: number }>
+  items: ReadonlyArray<{ key: string; icon: string; label: string; desc: string }>
   rooms: RoomComposition
   onChange: (key: keyof RoomComposition, delta: number) => void
 }) {
