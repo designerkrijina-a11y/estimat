@@ -24,8 +24,7 @@ export async function updatePricing(formData: FormData) {
   }
 
   const d = DEFAULT_PRICING
-
-  console.log("[updatePricing] received formData:", JSON.stringify(Object.fromEntries(formData.entries())))
+  const debugEntries = Object.fromEntries(formData.entries())
 
   const config: PricingConfig = {
     finishPricePerSqm: num(formData, "finishPricePerSqm", d.finishPricePerSqm),
@@ -74,9 +73,9 @@ export async function updatePricing(formData: FormData) {
     .from("pricing_config")
     .upsert({ id: 1, config, updated_at: new Date().toISOString() })
 
-  if (error) return { error: error.message }
+  if (error) return { error: error.message, debugEntries }
 
   revalidatePath("/admin/pricing")
   revalidatePath("/estimate")
-  return { success: true }
+  return { success: true, debugEntries, debugConfig: config }
 }
