@@ -128,6 +128,61 @@ function numberToKoreanWon(num: number) {
   return `일금 ${parts.join(" ")}원정`
 }
 
+type EstimateContext = {
+  areaSqm: number
+  employees: number
+  buildingGrade: string
+  constructionTime: string
+  rooms: RoomComposition
+  workTypes: Set<string>
+}
+
+function computeEstimateForGrade(gradeValue: string, ctx: EstimateContext) {
+  const finishMod = FINISH_GRADES.find((f) => f.value === gradeValue)?.modifier ?? 1
+  const buildingMod = BUILDING_GRADES.find((g) => g.value === ctx.buildingGrade)?.modifier ?? 0
+  const timeMod = CONSTRUCTION_TIMES.find((t) => t.value === ctx.constructionTime)?.modifier ?? 0
+
+  const finishBase = ctx.areaSqm * FINISH_PRICE_PER_SQM * finishMod
+  const buildingAdj = finishBase * buildingMod
+
+  const roomsCost =
+    ROOM_COUNTERS.reduce((sum, r) => sum + (ctx.rooms[r.key as keyof RoomComposition] as number) * r.price, 0) +
+    ROOM_TOGGLES.reduce((sum, r) => sum + ((ctx.rooms[r.key as keyof RoomComposition] as boolean) ? r.price : 0), 0)
+
+  let optionalCost = 0
+  if (ctx.workTypes.has("demolition")) optionalCost += ctx.areaSqm * 15_570
+  if (ctx.workTypes.has("acoustic")) optionalCost += ctx.areaSqm * 15_000
+  if (ctx.workTypes.has("hvac")) optionalCost += ctx.areaSqm * 25_000
+  if (ctx.workTypes.has("network")) optionalCost += ctx.areaSqm * 12_000
+  if (ctx.workTypes.has("av")) optionalCost += 4_000_000
+  if (ctx.workTypes.has("furniture")) optionalCost += ctx.employees * 570_000
+  if (ctx.workTypes.has("serverRoomBuild")) optionalCost += 6_000_000
+  if (ctx.workTypes.has("customStorage")) optionalCost += ctx.areaSqm * 20_000
+
+  const subtotal = finishBase + buildingAdj + roomsCost + optionalCost
+  const timeSurcharge = subtotal * timeMod
+  const total = roundToTenThousand(subtotal + timeSurcharge)
+
+  const cats = [
+    { label: "마감 공사 (기본)", value: finishBase + buildingAdj },
+    { label: "공간 구성", value: roomsCost },
+    { label: "추가 공종", value: optionalCost },
+    { label: "공사 시간대 할증", value: timeSurcharge },
+  ].filter((c) => c.value > 0)
+  const catSum = cats.reduce((s, c) => s + c.value, 0) || 1
+  const topCategories = cats
+    .map((c) => ({ ...c, pct: (c.value / catSum) * 100 }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 3)
+
+  return {
+    grade: gradeValue,
+    total,
+    breakdown: { finishBase, buildingAdj, roomsCost, optionalCost, timeSurcharge },
+    topCategories,
+  }
+}
+
 function generateEstimateNumber() {
   const now = new Date()
   const yy = String(now.getFullYear()).slice(2)
@@ -219,7 +274,8 @@ export function EstimateWizard() {
 
   const [rooms, setRooms] = useState<RoomComposition>(initialRooms)
 
-  const [finishGrade, setFinishGrade] = useState<FinishGrade | "">("")
+  const [finishGrades, setFinishGrades] = useState<Set<FinishGrade>>(new Set())
+  const [previewGrade, setPreviewGrade] = useState<FinishGrade>("중급")
   const [workTypes, setWorkTypes] = useState<Set<string>>(new Set())
 
   const [constructionTime, setConstructionTime] = useState<ConstructionTime | "">("")
@@ -251,6 +307,16 @@ export function EstimateWizard() {
   const areaSqm = Number.parseFloat(sqm) || 0
   const pyeongNum = Number.parseFloat(pyeong) || 0
   const employees = Number.parseInt(employeeCount, 10) || 0
+
+  function toggleFinishGrade(value: FinishGrade) {
+    setFinishGrades((prev) => {
+      const next = new Set(prev)
+      if (next.has(value)) next.delete(value)
+      else next.add(value)
+      return next
+    })
+    setPreviewGrade(value)
+  }
 
   function toggleWorkType(key: string) {
     setWorkTypes((prev) => {
@@ -286,53 +352,13 @@ export function EstimateWizard() {
     })
   }
 
-  const { total, breakdown } = useMemo(() => {
-    const finishMod = FINISH_GRADES.find((f) => f.value === finishGrade)?.modifier ?? 1
-    const buildingMod = BUILDING_GRADES.find((g) => g.value === buildingGrade)?.modifier ?? 0
-    const timeMod = CONSTRUCTION_TIMES.find((t) => t.value === constructionTime)?.modifier ?? 0
-
-    const finishBase = areaSqm * FINISH_PRICE_PER_SQM * finishMod
-    const buildingAdj = finishBase * buildingMod
-
-    const roomsCost =
-      ROOM_COUNTERS.reduce((sum, r) => sum + (rooms[r.key as keyof RoomComposition] as number) * r.price, 0) +
-      ROOM_TOGGLES.reduce((sum, r) => sum + ((rooms[r.key as keyof RoomComposition] as boolean) ? r.price : 0), 0)
-
-    let optionalCost = 0
-    if (workTypes.has("demolition")) optionalCost += areaSqm * 15_570
-    if (workTypes.has("acoustic")) optionalCost += areaSqm * 15_000
-    if (workTypes.has("hvac")) optionalCost += areaSqm * 25_000
-    if (workTypes.has("network")) optionalCost += areaSqm * 12_000
-    if (workTypes.has("av")) optionalCost += 4_000_000
-    if (workTypes.has("furniture")) optionalCost += employees * 570_000
-    if (workTypes.has("serverRoomBuild")) optionalCost += 6_000_000
-    if (workTypes.has("customStorage")) optionalCost += areaSqm * 20_000
-
-    const subtotal = finishBase + buildingAdj + roomsCost + optionalCost
-    const timeSurcharge = subtotal * timeMod
-    const finalTotal = roundToTenThousand(subtotal + timeSurcharge)
-
-    return {
-      total: finalTotal,
-      breakdown: { finishBase, buildingAdj, roomsCost, optionalCost, timeSurcharge },
-    }
-  }, [areaSqm, employees, finishGrade, buildingGrade, constructionTime, rooms, workTypes])
-
   const includedWorkCount = RECOMMENDED_WORK_TYPES.length + workTypes.size
 
-  const topCategories = useMemo(() => {
-    const cats = [
-      { label: "마감 공사 (기본)", value: breakdown.finishBase + breakdown.buildingAdj },
-      { label: "공간 구성", value: breakdown.roomsCost },
-      { label: "추가 공종", value: breakdown.optionalCost },
-      { label: "공사 시간대 할증", value: breakdown.timeSurcharge },
-    ].filter((c) => c.value > 0)
-    const sum = cats.reduce((s, c) => s + c.value, 0) || 1
-    return cats
-      .map((c) => ({ ...c, pct: (c.value / sum) * 100 }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3)
-  }, [breakdown])
+  const estimates = useMemo(() => {
+    const ctx: EstimateContext = { areaSqm, employees, buildingGrade, constructionTime, rooms, workTypes }
+    const grades = finishGrades.size > 0 ? Array.from(finishGrades) : ["중급" as FinishGrade]
+    return grades.map((g) => computeEstimateForGrade(g, ctx))
+  }, [areaSqm, employees, buildingGrade, constructionTime, rooms, workTypes, finishGrades])
 
   const { issueDateStr, validUntilStr } = useMemo(() => {
     const now = new Date()
@@ -347,7 +373,7 @@ export function EstimateWizard() {
       if (!pyeongNum || pyeongNum <= 0) return setStepError("전용면적을 입력해주세요.")
       if (!employees || employees <= 0) return setStepError("직원 수를 1명 이상 입력해주세요.")
     }
-    if (step === 2 && !finishGrade) return setStepError("마감등급을 선택해주세요.")
+    if (step === 2 && finishGrades.size === 0) return setStepError("마감등급을 하나 이상 선택해주세요.")
     if (step === 3 && !constructionTime) return setStepError("공사 시간대를 선택해주세요.")
     setStep((s) => Math.min(s + 1, STEPS.length - 1))
   }
@@ -367,35 +393,38 @@ export function EstimateWizard() {
 
     setSubmitting(true)
     setErrorMsg(null)
-    const res = await submitEstimate({
-      pyeong: pyeongNum,
-      area_sqm: areaSqm,
-      employee_count: employees,
-      building_grade: buildingGrade,
-      construction_type: constructionType,
-      finish_grade: (finishGrade || "중급") as FinishGrade,
-      construction_time: (constructionTime || "주간") as ConstructionTime,
-      included_work_types: Array.from(workTypes),
-      room_composition: rooms,
-      estimated_price: total,
-      company_name: companyName.trim(),
-      position: position.trim(),
-      contact_phone: phone.trim(),
-      contact_email: email.trim(),
-      privacy_consent: consent,
-    })
+    const results = await Promise.all(
+      estimates.map((e) =>
+        submitEstimate({
+          pyeong: pyeongNum,
+          area_sqm: areaSqm,
+          employee_count: employees,
+          building_grade: buildingGrade,
+          construction_type: constructionType,
+          finish_grade: e.grade as FinishGrade,
+          construction_time: (constructionTime || "주간") as ConstructionTime,
+          included_work_types: Array.from(workTypes),
+          room_composition: rooms,
+          estimated_price: e.total,
+          company_name: companyName.trim(),
+          position: position.trim(),
+          contact_phone: phone.trim(),
+          contact_email: email.trim(),
+          privacy_consent: consent,
+        })
+      )
+    )
     setSubmitting(false)
-    if (res.ok) {
+    const failed = results.find((r) => !r.ok)
+    if (!failed) {
       setEstimateNumber(generateEstimateNumber())
       setDone(true)
     } else {
-      setErrorMsg(res.error ?? "제출 중 오류가 발생했습니다.")
+      setErrorMsg(failed.error ?? "제출 중 오류가 발생했습니다.")
     }
   }
 
   if (done) {
-    const pricePerPyeong = pyeongNum > 0 ? Math.round(total / pyeongNum) : 0
-
     return (
       <div className="mx-auto flex max-w-3xl flex-col gap-4 print:gap-2">
         <div className="flex items-center justify-between print:hidden">
@@ -415,91 +444,104 @@ export function EstimateWizard() {
           </Button>
         </div>
 
-        <Card
-          className="overflow-hidden border-none p-0 text-white"
-          style={{ background: `linear-gradient(135deg, #162163, ${BRAND})` }}
-        >
-          <CardContent className="flex flex-col gap-6 p-6 print:gap-3 print:p-4 md:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <p className="text-xs font-medium text-white/60">{estimateNumber}</p>
-                <h2 className="text-2xl font-bold print:text-xl md:text-3xl">{companyName}</h2>
-                <p className="text-sm text-white/70">오피스 인테리어 Fit Out</p>
-                <p className="mt-1 text-xs text-white/60">
-                  담당: {position} · {email}
+        {estimates.map((e, idx) => {
+          const pricePerPyeong = pyeongNum > 0 ? Math.round(e.total / pyeongNum) : 0
+          const gradeLabel = FINISH_GRADES.find((f) => f.value === e.grade)?.label ?? e.grade
+          return (
+            <div key={e.grade} className="grade-quote-block flex flex-col gap-4 print:gap-2">
+              {estimates.length > 1 && (
+                <p className="text-xs font-semibold text-muted-foreground print:hidden">
+                  비교안 {idx + 1}/{estimates.length} · {gradeLabel}
                 </p>
-              </div>
-              <div className="text-right text-xs text-white/60">
-                <p>발행일 {issueDateStr}</p>
-                <p>유효기간 {validUntilStr}</p>
-              </div>
+              )}
+              <Card
+                className="overflow-hidden border-none p-0 text-white"
+                style={{ background: `linear-gradient(135deg, #162163, ${BRAND})` }}
+              >
+                <CardContent className="flex flex-col gap-6 p-6 print:gap-3 print:p-4 md:p-8">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-medium text-white/60">{estimateNumber}</p>
+                      <h2 className="text-2xl font-bold print:text-xl md:text-3xl">{companyName}</h2>
+                      <p className="text-sm text-white/70">오피스 인테리어 Fit Out · {gradeLabel}</p>
+                      <p className="mt-1 text-xs text-white/60">
+                        담당: {position} · {email}
+                      </p>
+                    </div>
+                    <div className="text-right text-xs text-white/60">
+                      <p>발행일 {issueDateStr}</p>
+                      <p>유효기간 {validUntilStr}</p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/15" />
+
+                  <div>
+                    <p className="text-sm text-white/60">총 공사비 (VAT 별도)</p>
+                    <p className="text-3xl font-bold tracking-tight print:text-2xl md:text-4xl">₩{won.format(e.total)}</p>
+                    <p className="mt-1 text-sm text-white/60">{numberToKoreanWon(e.total)}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 print:gap-1 sm:grid-cols-4">
+                    <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                      <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">전용면적</p>
+                      <p className="text-sm font-semibold print:text-xs print:leading-tight">{won.format(pyeongNum)}평</p>
+                      <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">{won.format(areaSqm)}㎡</p>
+                    </div>
+                    <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                      <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">평당 단가</p>
+                      <p className="text-sm font-semibold print:text-xs print:leading-tight">{won.format(Math.round(pricePerPyeong / 10_000))}만원</p>
+                      <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">원/평</p>
+                    </div>
+                    <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                      <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">마감등급</p>
+                      <p className="text-sm font-semibold print:text-xs print:leading-tight">{gradeLabel}</p>
+                      <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">마감 기준</p>
+                    </div>
+                    <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                      <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">포함 공정</p>
+                      <p className="text-sm font-semibold print:text-xs print:leading-tight">{includedWorkCount}개</p>
+                      <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">공정 산출</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base print:text-xs">주요 공정 비중</CardTitle>
+                  <CardDescription>전체 항목 중 비중이 큰 상위 {e.topCategories.length}개</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4 print:gap-2">
+                  {e.topCategories.map((c, i) => (
+                    <div key={c.label} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 font-medium">
+                          <span
+                            className="flex size-5 items-center justify-center rounded-full text-xs text-white"
+                            style={{ backgroundColor: BRAND }}
+                          >
+                            {i + 1}
+                          </span>
+                          {c.label}
+                        </span>
+                        <span className="font-semibold" style={{ color: BRAND }}>
+                          {c.pct.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full" style={{ width: `${c.pct}%`, backgroundColor: BRAND }} />
+                      </div>
+                    </div>
+                  ))}
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    전체 항목의 상세 내역과 산출 근거는 담당자 검토 후 회신 이메일로 안내해 드립니다.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-
-            <div className="h-px bg-white/15" />
-
-            <div>
-              <p className="text-sm text-white/60">총 공사비 (VAT 별도)</p>
-              <p className="text-3xl font-bold tracking-tight print:text-2xl md:text-4xl">₩{won.format(total)}</p>
-              <p className="mt-1 text-sm text-white/60">{numberToKoreanWon(total)}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 print:gap-1 sm:grid-cols-4">
-              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
-                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">전용면적</p>
-                <p className="text-sm font-semibold print:text-xs print:leading-tight">{won.format(pyeongNum)}평</p>
-                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">{won.format(areaSqm)}㎡</p>
-              </div>
-              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
-                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">평당 단가</p>
-                <p className="text-sm font-semibold print:text-xs print:leading-tight">{won.format(Math.round(pricePerPyeong / 10_000))}만원</p>
-                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">원/평</p>
-              </div>
-              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
-                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">마감등급</p>
-                <p className="text-sm font-semibold print:text-xs print:leading-tight">{finishGrade || "중급"}</p>
-                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">마감 기준</p>
-              </div>
-              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
-                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">포함 공정</p>
-                <p className="text-sm font-semibold print:text-xs print:leading-tight">{includedWorkCount}개</p>
-                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">공정 산출</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base print:text-xs">주요 공정 비중</CardTitle>
-            <CardDescription>전체 항목 중 비중이 큰 상위 {topCategories.length}개</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 print:gap-2">
-            {topCategories.map((c, i) => (
-              <div key={c.label} className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 font-medium">
-                    <span
-                      className="flex size-5 items-center justify-center rounded-full text-xs text-white"
-                      style={{ backgroundColor: BRAND }}
-                    >
-                      {i + 1}
-                    </span>
-                    {c.label}
-                  </span>
-                  <span className="font-semibold" style={{ color: BRAND }}>
-                    {c.pct.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full" style={{ width: `${c.pct}%`, backgroundColor: BRAND }} />
-                </div>
-              </div>
-            ))}
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              전체 항목의 상세 내역과 산출 근거는 담당자 검토 후 회신 이메일로 안내해 드립니다.
-            </p>
-          </CardContent>
-        </Card>
+          )
+        })}
 
         <Card style={{ borderColor: `${BRAND}33` }} className="text-center print:hidden">
           <CardContent className="flex flex-col items-center gap-2 py-8 print:py-3">
@@ -520,7 +562,13 @@ export function EstimateWizard() {
               { label: "전용면적", value: `${won.format(areaSqm)}㎡ (${won.format(pyeongNum)}평)` },
               { label: "직원 수", value: `${employees}명` },
               { label: "건물등급", value: `${buildingGrade}급` },
-              { label: "마감등급", value: finishGrade || "중급" },
+              {
+                label: "마감등급",
+                value:
+                  estimates.length > 1
+                    ? estimates.map((e) => FINISH_GRADES.find((f) => f.value === e.grade)?.label ?? e.grade).join(", ")
+                    : (FINISH_GRADES.find((f) => f.value === estimates[0]?.grade)?.label ?? "중급"),
+              },
               { label: "공사유형", value: constructionType },
               { label: "공사시간대", value: constructionTime || "주간" },
             ].map((item) => (
@@ -713,23 +761,26 @@ export function EstimateWizard() {
                 <span className="text-xl">⚙️</span>
                 마감 등급
               </CardTitle>
-              <CardDescription>마감등급은 전체 공사비에 가장 큰 영향을 미칩니다.</CardDescription>
+              <CardDescription>
+                마감등급은 전체 공사비에 가장 큰 영향을 미칩니다. 여러 등급을 선택하면 등급별 견적서가 각각 생성됩니다.
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <FinishGradeGallery
-                grade={finishGrade || "중급"}
-                label={FINISH_GRADES.find((f) => f.value === (finishGrade || "중급"))?.label ?? "마감"}
+                grade={previewGrade}
+                label={FINISH_GRADES.find((f) => f.value === previewGrade)?.label ?? "마감"}
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 {FINISH_GRADES.map((f) => {
-                  const selected = finishGrade === f.value
+                  const selected = finishGrades.has(f.value)
                   return (
-                    <button key={f.value} type="button" onClick={() => setFinishGrade(f.value)} aria-pressed={selected}
+                    <button key={f.value} type="button" onClick={() => toggleFinishGrade(f.value)} aria-pressed={selected}
                       className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-colors ${selected ? "border-primary bg-accent ring-1 ring-primary" : "border-border bg-card hover:border-primary/50"}`}>
                       <span className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5 font-semibold">
                           <span>{f.dot}</span>
                           {f.label}
+                          {selected && <CheckCircle2 className="size-4 text-primary" />}
                         </span>
                         <span className={`text-xs font-medium ${selected ? "text-primary" : "text-muted-foreground"}`}>{f.tag}</span>
                       </span>

@@ -178,4 +178,12 @@
   [data-slot='card'] {
     --card-spacing: 0.5rem !important;
   }
+
+  .grade-quote-block {
+    break-inside: avoid;
+  }
+
+  .grade-quote-block:not(:last-child) {
+    break-after: page;
+  }
 }
