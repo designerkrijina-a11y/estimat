@@ -70,7 +70,7 @@ const RECOMMENDED_WORK_TYPES = [
 
 const OPTIONAL_WORK_TYPES = [
   { key: "demolition", icon: "🔨", label: "철거공사", desc: "기존 마감재 철거 (리모델링 시)" },
-  { key: "relocation", icon: "🚚", label: "기업이전", desc: "이사·포장·운반 (인원수 기반 자동 산출)" },
+  { key: "acoustic", icon: "🔇", label: "흡음공사", desc: "실별 소음이 서로 방해되지 않도록 흡음 마감" },
   { key: "hvac", icon: "❄️", label: "냉난방기공사", desc: "시스템에어컨 실내외기+배관" },
   { key: "network", icon: "📡", label: "통신공사", desc: "CAT-6 케이블링·무선AP·패치패널" },
   { key: "av", icon: "📺", label: "영상장비 및 AV", desc: "모니터·화상회의·음향" },
@@ -298,7 +298,7 @@ export function EstimateWizard() {
 
     let optionalCost = 0
     if (workTypes.has("demolition")) optionalCost += areaSqm * 15_570
-    if (workTypes.has("relocation")) optionalCost += employees * 80_000
+    if (workTypes.has("acoustic")) optionalCost += areaSqm * 15_000
     if (workTypes.has("hvac")) optionalCost += areaSqm * 25_000
     if (workTypes.has("network")) optionalCost += areaSqm * 12_000
     if (workTypes.has("av")) optionalCost += 4_000_000
