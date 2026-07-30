@@ -440,26 +440,26 @@ export function EstimateWizard() {
               <p className="mt-1 text-sm text-white/60">{numberToKoreanWon(total)}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 print:gap-2 sm:grid-cols-4">
-              <div className="rounded-lg bg-white/10 p-3 print:p-2">
-                <p className="text-xs text-white/60">전용면적</p>
-                <p className="text-sm font-semibold">{won.format(pyeongNum)}평</p>
-                <p className="text-xs text-white/50">{won.format(areaSqm)}㎡</p>
+            <div className="grid grid-cols-2 gap-3 print:gap-1 sm:grid-cols-4">
+              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">전용면적</p>
+                <p className="text-sm font-semibold print:text-xs print:leading-tight">{won.format(pyeongNum)}평</p>
+                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">{won.format(areaSqm)}㎡</p>
               </div>
-              <div className="rounded-lg bg-white/10 p-3 print:p-2">
-                <p className="text-xs text-white/60">평당 단가</p>
-                <p className="text-sm font-semibold">{won.format(Math.round(pricePerPyeong / 10_000))}만원</p>
-                <p className="text-xs text-white/50">원/평</p>
+              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">평당 단가</p>
+                <p className="text-sm font-semibold print:text-xs print:leading-tight">{won.format(Math.round(pricePerPyeong / 10_000))}만원</p>
+                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">원/평</p>
               </div>
-              <div className="rounded-lg bg-white/10 p-3 print:p-2">
-                <p className="text-xs text-white/60">마감등급</p>
-                <p className="text-sm font-semibold">{finishGrade || "중급"}</p>
-                <p className="text-xs text-white/50">마감 기준</p>
+              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">마감등급</p>
+                <p className="text-sm font-semibold print:text-xs print:leading-tight">{finishGrade || "중급"}</p>
+                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">마감 기준</p>
               </div>
-              <div className="rounded-lg bg-white/10 p-3 print:p-2">
-                <p className="text-xs text-white/60">포함 공정</p>
-                <p className="text-sm font-semibold">{includedWorkCount}개</p>
-                <p className="text-xs text-white/50">공정 산출</p>
+              <div className="rounded-lg bg-white/10 p-3 print:p-1.5">
+                <p className="text-xs text-white/60 print:text-[9px] print:leading-tight">포함 공정</p>
+                <p className="text-sm font-semibold print:text-xs print:leading-tight">{includedWorkCount}개</p>
+                <p className="text-xs text-white/50 print:text-[8px] print:leading-tight">공정 산출</p>
               </div>
             </div>
           </CardContent>
@@ -467,7 +467,7 @@ export function EstimateWizard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">주요 공정 비중</CardTitle>
+            <CardTitle className="text-base print:text-xs">주요 공정 비중</CardTitle>
             <CardDescription>전체 항목 중 비중이 큰 상위 {topCategories.length}개</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 print:gap-2">
@@ -510,9 +510,9 @@ export function EstimateWizard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">견적 산출 기준</CardTitle>
+            <CardTitle className="text-base print:text-xs">견적 산출 기준</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <CardContent className="grid grid-cols-2 gap-3 print:gap-1 sm:grid-cols-3">
             {[
               { label: "전용면적", value: `${won.format(areaSqm)}㎡ (${won.format(pyeongNum)}평)` },
               { label: "직원 수", value: `${employees}명` },
@@ -521,9 +521,9 @@ export function EstimateWizard() {
               { label: "공사유형", value: constructionType },
               { label: "공사시간대", value: constructionTime || "주간" },
             ].map((item) => (
-              <div key={item.label} className="rounded-lg border border-border p-3">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p className="text-sm font-semibold">{item.value}</p>
+              <div key={item.label} className="rounded-lg border border-border p-3 print:p-1.5">
+                <p className="text-xs text-muted-foreground print:text-[9px] print:leading-tight">{item.label}</p>
+                <p className="text-sm font-semibold print:text-xs print:leading-tight">{item.value}</p>
               </div>
             ))}
           </CardContent>
@@ -531,10 +531,10 @@ export function EstimateWizard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">참고사항</CardTitle>
+            <CardTitle className="text-base print:text-xs">참고사항</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="flex flex-col gap-1.5 text-xs leading-relaxed text-muted-foreground">
+            <ul className="flex flex-col gap-1.5 print:gap-0.5 text-xs leading-relaxed text-muted-foreground print:text-[9px] print:leading-snug">
               <li>· 본 견적서는 자동 산출 결과로, 실제 시공 금액과 차이가 발생할 수 있습니다.</li>
               <li>· VAT(부가가치세) 별도 기준입니다.</li>
               <li>· 견적 유효기간: 발행일로부터 30일 ({validUntilStr})</li>
