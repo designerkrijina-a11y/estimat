@@ -1,7 +1,8 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getCurrentUser } from "@/lib/auth"
 import { DEFAULT_PRICING, type PricingConfig } from "@/lib/pricing"
 
 function num(formData: FormData, key: string, fallback: number) {
@@ -12,16 +13,13 @@ function num(formData: FormData, key: string, fallback: number) {
 }
 
 export async function updatePricing(formData: FormData) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: "로그인이 필요합니다." }
-
-  const { data: profile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
-  if (profile?.role !== "super_admin" && profile?.role !== "admin") {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) return { error: "로그인이 필요합니다." }
+  if (currentUser.role !== "super_admin" && currentUser.role !== "admin") {
     return { error: "관리자 이상만 단가를 수정할 수 있습니다." }
   }
+
+  const supabase = createAdminClient()
 
   const d = DEFAULT_PRICING
 

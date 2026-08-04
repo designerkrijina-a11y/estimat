@@ -1,87 +1,45 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getCurrentUser } from "@/lib/auth"
+import { findInteriorDashboardUser } from "@/lib/interiorDashboardAuth"
 
 async function requireSuperAdmin() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) throw new Error("로그인이 필요합니다.")
-
-  const { data: profile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
-
-  if (profile?.role !== "super_admin") throw new Error("수퍼관리자만 사용할 수 있는 기능입니다.")
-
-  return user
+  const currentUser = await getCurrentUser()
+  if (!currentUser) throw new Error("로그인이 필요합니다.")
+  if (currentUser.role !== "super_admin") throw new Error("수퍼관리자만 사용할 수 있는 기능입니다.")
+  return currentUser
 }
 
-export async function createAccount(formData: FormData) {
+// 아이디/비밀번호는 만들지 않는다 — 현장관리 대시보드에 이미 있는 계정에게
+// 이 견적 계산기 관리자 화면 접근 권한(등급)만 추가한다.
+export async function addAccount(formData: FormData) {
   try {
     await requireSuperAdmin()
   } catch (e) {
     return { error: e instanceof Error ? e.message : "권한 확인에 실패했습니다." }
   }
 
-  const email = String(formData.get("email") ?? "").trim()
-  const password = String(formData.get("password") ?? "")
-  const name = String(formData.get("name") ?? "").trim()
+  const loginId = String(formData.get("email") ?? "").trim()
   const role = String(formData.get("role") ?? "staff")
 
-  if (!email || !password) {
-    return { error: "이메일과 비밀번호를 입력해주세요." }
-  }
-  if (password.length < 6) {
-    return { error: "비밀번호는 6자 이상이어야 합니다." }
+  if (!loginId) {
+    return { error: "이메일(현장관리 대시보드 아이디)을 입력해주세요." }
   }
   if (!["super_admin", "admin", "staff"].includes(role)) {
     return { error: "올바르지 않은 권한입니다." }
   }
 
-  const admin = createAdminClient()
-
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  })
-
-  if (error || !data.user) {
-    return { error: error?.message ?? "계정 생성에 실패했습니다." }
-  }
-
-  const { error: profileError } = await admin.from("admin_profiles").insert({
-    id: data.user.id,
-    email,
-    name: name || null,
-    role,
-  })
-
-  if (profileError) {
-    await admin.auth.admin.deleteUser(data.user.id)
-    return { error: profileError.message }
-  }
-
-  revalidatePath("/admin/accounts")
-  return { success: true }
-}
-
-export async function updateAccountRole(id: string, role: string) {
-  try {
-    await requireSuperAdmin()
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "권한 확인에 실패했습니다." }
-  }
-
-  if (!["super_admin", "admin", "staff"].includes(role)) {
-    return { error: "올바르지 않은 권한입니다." }
+  const dashboardUser = await findInteriorDashboardUser(loginId).catch(() => null)
+  if (!dashboardUser) {
+    return { error: "현장관리 대시보드에 이 이메일로 된 활성 계정이 없습니다." }
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from("admin_profiles").update({ role }).eq("id", id)
+  const { error } = await admin
+    .from("estimate_admin_roles")
+    .upsert({ login_id: dashboardUser.loginId, name: dashboardUser.name, role })
 
   if (error) return { error: error.message }
 
@@ -89,23 +47,41 @@ export async function updateAccountRole(id: string, role: string) {
   return { success: true }
 }
 
-export async function deleteAccount(id: string) {
-  let currentUserId: string
+export async function updateAccountRole(loginId: string, role: string) {
   try {
-    currentUserId = (await requireSuperAdmin()).id
+    await requireSuperAdmin()
   } catch (e) {
     return { error: e instanceof Error ? e.message : "권한 확인에 실패했습니다." }
   }
 
-  if (currentUserId === id) {
+  if (!["super_admin", "admin", "staff"].includes(role)) {
+    return { error: "올바르지 않은 권한입니다." }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from("estimate_admin_roles").update({ role }).eq("login_id", loginId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath("/admin/accounts")
+  return { success: true }
+}
+
+export async function deleteAccount(loginId: string) {
+  let currentLoginId: string
+  try {
+    currentLoginId = (await requireSuperAdmin()).loginId
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "권한 확인에 실패했습니다." }
+  }
+
+  if (currentLoginId === loginId) {
     return { error: "본인 계정은 삭제할 수 없습니다." }
   }
 
   const admin = createAdminClient()
-  const { error: authError } = await admin.auth.admin.deleteUser(id)
-  if (authError) return { error: authError.message }
-
-  await admin.from("admin_profiles").delete().eq("id", id)
+  const { error } = await admin.from("estimate_admin_roles").delete().eq("login_id", loginId)
+  if (error) return { error: error.message }
 
   revalidatePath("/admin/accounts")
   return { success: true }

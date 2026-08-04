@@ -10,7 +10,9 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8">
         <h1 className="mb-1 text-xl font-bold">관리자 로그인</h1>
-        <p className="mb-6 text-sm text-muted-foreground">견적 요청 관리 보드에 접근하려면 로그인하세요.</p>
+        <p className="mb-6 text-sm text-muted-foreground">
+          현장관리 대시보드 계정으로 로그인하세요.
+        </p>
 
         {params.error && (
           <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
@@ -29,7 +31,7 @@ export default async function LoginPage({
               type="email"
               required
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              placeholder="admin@estimat.com"
+              placeholder="name@ajd.co.kr"
             />
           </div>
           <div className="flex flex-col gap-2">

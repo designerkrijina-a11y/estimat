@@ -1,5 +1,7 @@
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getCurrentUser } from "@/lib/auth"
 import { logout } from "./login/actions"
 import { AdminExportButton } from "@/components/admin-export-button"
 
@@ -67,19 +69,13 @@ export default async function AdminPage({
   const pyeong = params.pyeong ?? ""
   const contact = params.contact ?? ""
 
-  const supabase = await createClient()
+  const currentUser = await getCurrentUser()
+  if (!currentUser) redirect("/admin/login")
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const isSuperAdmin = currentUser.role === "super_admin"
+  const canManagePricing = currentUser.role === "super_admin" || currentUser.role === "admin"
 
-  let isSuperAdmin = false
-  let canManagePricing = false
-  if (user) {
-    const { data: profile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
-    isSuperAdmin = profile?.role === "super_admin"
-    canManagePricing = profile?.role === "super_admin" || profile?.role === "admin"
-  }
+  const supabase = createAdminClient()
 
   let query = supabase.from("estimate_requests").select("*").order("created_at", { ascending: false })
   if (from) query = query.gte("created_at", `${from}T00:00:00`)
@@ -108,6 +104,7 @@ export default async function AdminPage({
             <p className="text-muted-foreground">접수된 견적 요청을 최신순으로 확인하세요.</p>
           </div>
           <div className="flex items-center gap-2">
+            <span className="whitespace-nowrap text-sm text-muted-foreground">{currentUser.name}님</span>
             {canManagePricing && (
               <Link
                 href="/admin/pricing"

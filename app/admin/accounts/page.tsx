@@ -1,26 +1,20 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getCurrentUser } from "@/lib/auth"
 import { AccountsManager, type AdminAccount } from "@/components/accounts-manager"
 
 export const dynamic = "force-dynamic"
 
 export default async function AccountsPage() {
-  const supabase = await createClient()
+  const currentUser = await getCurrentUser()
+  if (!currentUser) redirect("/admin/login")
+  if (currentUser.role !== "super_admin") redirect("/admin")
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) redirect("/admin/login")
-
-  const { data: myProfile } = await supabase.from("admin_profiles").select("role").eq("id", user.id).single()
-
-  if (myProfile?.role !== "super_admin") redirect("/admin")
-
+  const supabase = createAdminClient()
   const { data, error } = await supabase
-    .from("admin_profiles")
-    .select("id, email, name, role, created_at")
+    .from("estimate_admin_roles")
+    .select("login_id, name, role, created_at")
     .order("created_at", { ascending: true })
 
   const accounts = (data ?? []) as AdminAccount[]
@@ -33,7 +27,10 @@ export default async function AccountsPage() {
             ← 관리 보드로 돌아가기
           </Link>
           <h1 className="text-pretty text-3xl font-bold tracking-tight">계정 관리</h1>
-          <p className="text-muted-foreground">관리자 계정을 추가하고 권한을 관리하세요.</p>
+          <p className="text-muted-foreground">
+            현장관리 대시보드에 이미 있는 계정에게 견적 계산기 관리자 접근 권한을 부여하거나 등급을 바꿉니다.
+            아이디/비밀번호는 여기서 만들지 않고, 현장관리 대시보드 계정을 그대로 씁니다.
+          </p>
         </header>
 
         {error ? (
@@ -41,7 +38,7 @@ export default async function AccountsPage() {
             계정 목록을 불러오지 못했습니다: {error.message}
           </div>
         ) : (
-          <AccountsManager accounts={accounts} currentUserId={user.id} />
+          <AccountsManager accounts={accounts} currentLoginId={currentUser.loginId} />
         )}
       </div>
     </main>
