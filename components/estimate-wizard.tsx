@@ -234,9 +234,24 @@ const initialRooms: RoomComposition = {
   storage: 1,
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const result = [...arr]
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  return result
+}
+
 function FinishGradeGallery() {
-  const images = ALL_OFFICE_IMAGES
+  // 최초 렌더(서버)는 고정 순서로 그려 하이드레이션 불일치를 피하고,
+  // 마운트 직후(클라이언트) 한 번 섞어서 새로고침할 때마다 다른 순서로 보이게 함
+  const [images, setImages] = useState(ALL_OFFICE_IMAGES)
   const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    setImages(shuffleArray(ALL_OFFICE_IMAGES))
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => {
