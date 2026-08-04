@@ -66,6 +66,9 @@ const FINISH_GRADE_IMAGES: Record<string, string[]> = {
   ],
 }
 
+// 마감등급 선택 여부와 무관하게 항상 이 순서(초급→중급→고급→프리미엄)로 전체 16장이 순환 재생됨
+const ALL_OFFICE_IMAGES = Object.values(FINISH_GRADE_IMAGES).flat()
+
 const RECOMMENDED_WORK_TYPES = [
   { key: "dryWall", icon: "🧱", label: "건식벽체", desc: "경량칸막이·단열재·석고보드" },
   { key: "glassWall", icon: "🪟", label: "유리벽체", desc: "10T 강화유리+ST'L 프레임" },
@@ -231,13 +234,9 @@ const initialRooms: RoomComposition = {
   storage: 1,
 }
 
-function FinishGradeGallery({ grade, label }: { grade: string; label: string }) {
-  const images = FINISH_GRADE_IMAGES[grade] ?? FINISH_GRADE_IMAGES["중급"]
+function FinishGradeGallery() {
+  const images = ALL_OFFICE_IMAGES
   const [index, setIndex] = useState(0)
-
-  useEffect(() => {
-    setIndex(0)
-  }, [grade])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -250,11 +249,11 @@ function FinishGradeGallery({ grade, label }: { grade: string; label: string }) 
     <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
       <img
         src={images[index] || "/placeholder.svg"}
-        alt={`${label} 참고 이미지`}
+        alt="아정당인테리어 오피스 시공 사례"
         className="h-64 w-full object-cover sm:h-80"
       />
       <div className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
-        {label} 미리보기 · {index + 1}/{images.length}
+        시공 사례 · {index + 1}/{images.length}
       </div>
       <button
         type="button"
@@ -296,7 +295,6 @@ export function EstimateWizard({ pricing = DEFAULT_PRICING }: { pricing?: Pricin
   const [rooms, setRooms] = useState<RoomComposition>(initialRooms)
 
   const [finishGrades, setFinishGrades] = useState<Set<FinishGrade>>(new Set())
-  const [previewGrade, setPreviewGrade] = useState<FinishGrade>("중급")
   const [workTypes, setWorkTypes] = useState<Set<string>>(new Set())
 
   const [constructionTime, setConstructionTime] = useState<ConstructionTime | "">("")
@@ -336,7 +334,6 @@ export function EstimateWizard({ pricing = DEFAULT_PRICING }: { pricing?: Pricin
       else next.add(value)
       return next
     })
-    setPreviewGrade(value)
   }
 
   function toggleWorkType(key: string) {
@@ -782,10 +779,7 @@ export function EstimateWizard({ pricing = DEFAULT_PRICING }: { pricing?: Pricin
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <FinishGradeGallery
-                grade={previewGrade}
-                label={FINISH_GRADES.find((f) => f.value === previewGrade)?.label ?? "마감"}
-              />
+              <FinishGradeGallery />
               <div className="grid gap-3 sm:grid-cols-2">
                 {FINISH_GRADES.map((f) => {
                   const selected = finishGrades.has(f.value)
