@@ -32,30 +32,37 @@ const FINISH_GRADES = [
   { value: "프리미엄", dot: "🔴", label: "프리미엄 마감", desc: "전 공정 최고급·대리석·바리솔 전체" },
 ] as const
 
+// 아정당 인테리어 실제 시공 사례 사진 (landing.ajd.co.kr/interior/portfolio/commercial, 사무실 카테고리)
 const FINISH_GRADE_IMAGES: Record<string, string[]> = {
   초급: [
-    "https://images.unsplash.com/photo-1449247709967-d4461a6a6103?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1704655295066-681e61ecca6b?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1705909770198-7e83c24e1616?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1693625700727-b548ca8f5679?auto=format&fit=crop&w=1200&q=80",
+    // 판교 'M' 사 스튜디오 라운지 (24평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7wpc6-a50lsn.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7z5b0-n9wwl3.jpg",
+    // 관악 'A'사 오피스 (30평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7i7lj/cmpc7i7lj-up-mpc7o3nq-ch3kg2.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7i7lj/cmpc7i7lj-up-mpc7o3ns-qhsyms.jpg",
   ],
   중급: [
-    "https://images.unsplash.com/photo-1715593949273-09009558300a?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1706074797611-a02f9ed06439?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1706074793638-da28b90ea8ae?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1631248055158-edec7a3c072b?auto=format&fit=crop&w=1200&q=80",
+    // 강남 'H' 사 오피스 라운지 (39평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc8cx9u/cmpc8cx9u-up-mpc8l9om-9re0p9.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc8cx9u/cmpc8cx9u-up-mpc8l9nu-2tyn0w.jpg",
+    // 강남 'G'사 대회의실 리모델링 공사 (42평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpqqejct/cmpqqejct-up-mpqqqtnu-p9gxcz.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpqqejct/cmpqqejct-up-mpqqqqf4-4048ox.jpg",
   ],
   고급: [
-    "https://images.unsplash.com/photo-1699621106755-4fe40ce95d64?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1778731525532-d2ab833c8463?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1778731525509-e1bb04020935?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1783437581569-d10b23df85f5?auto=format&fit=crop&w=1200&q=80",
+    // 강남 'I'사 오피스 (53평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5ue33-1svxam.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5tozo-sm0rxx.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpzbewrz-xu7pp6.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5u6h1-wzgdnr.jpg",
   ],
   프리미엄: [
-    "https://images.unsplash.com/photo-1625244724120-1fd1d34d00f6?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1677129667171-92abd8740fa3?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1718873003411-ea2e7f6fc6f1?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1728488447895-0f0d82299f16?auto=format&fit=crop&w=1200&q=80",
+    // 대구 'A'사 오피스 (230평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfapwvj-ityg7n.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfappic-s83kjn.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfaqcmw-56st32.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfaqk5o-qcl2ys.jpg",
   ],
 }
 
