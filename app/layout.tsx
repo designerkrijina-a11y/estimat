@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '아정네트웍스 | 오피스 인테리어 견적 계산기',
-  description: '아정네트웍스의 오피스 인테리어 자동 견적 계산기입니다. 공간 정보와 시공 조건을 입력하면 상세 견적서를 바로 확인할 수 있습니다.',
+  title: '아정당인테리어 | 오피스 인테리어 견적 계산기',
+  description: '아정당인테리어의 오피스 인테리어 자동 견적 계산기입니다. 공간 정보와 시공 조건을 입력하면 상세 견적서를 바로 확인할 수 있습니다.',
   icons: {
     icon: [
       {
