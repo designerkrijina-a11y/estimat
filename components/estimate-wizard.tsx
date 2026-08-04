@@ -33,36 +33,36 @@ const FINISH_GRADES = [
 ] as const
 
 // 아정당 인테리어 실제 시공 사례 사진 (landing.ajd.co.kr/interior/portfolio/commercial, 사무실 카테고리)
+// 확대컷 제외, 전체 공간이 보이는 사진 위주로 선정
 const FINISH_GRADE_IMAGES: Record<string, string[]> = {
   초급: [
-    // 판교 'M' 사 스튜디오 라운지 (24평)
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7wpc6-a50lsn.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7z5b0-n9wwl3.jpg",
+    // 강남 'I'사 오피스 (53평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5ue33-1svxam.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpzbewrz-xu7pp6.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5u6h1-wzgdnr.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5ulbz-bjf70r.jpg",
+  ],
+  중급: [
+    // 대구 'A'사 오피스 (230평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfapwvj-ityg7n.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfappic-s83kjn.jpg",
     // 관악 'A'사 오피스 (30평)
     "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7i7lj/cmpc7i7lj-up-mpc7o3nq-ch3kg2.jpg",
     "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7i7lj/cmpc7i7lj-up-mpc7o3ns-qhsyms.jpg",
   ],
-  중급: [
+  고급: [
+    // 판교 'M' 사 스튜디오 라운지 (24평)
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7wpc6-a50lsn.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7z5b0-n9wwl3.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7z5ft-w1dp5j.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc7r6zo/cmpc7r6zo-up-mpc7z5dd-iiwc81.jpg",
+  ],
+  프리미엄: [
     // 강남 'H' 사 오피스 라운지 (39평)
     "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc8cx9u/cmpc8cx9u-up-mpc8l9om-9re0p9.jpg",
     "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc8cx9u/cmpc8cx9u-up-mpc8l9nu-2tyn0w.jpg",
-    // 강남 'G'사 대회의실 리모델링 공사 (42평)
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpqqejct/cmpqqejct-up-mpqqqtnu-p9gxcz.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpqqejct/cmpqqejct-up-mpqqqqf4-4048ox.jpg",
-  ],
-  고급: [
-    // 강남 'I'사 오피스 (53평)
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5ue33-1svxam.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5tozo-sm0rxx.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpzbewrz-xu7pp6.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc5lw1i/cmpc5lw1i-up-mpc5u6h1-wzgdnr.jpg",
-  ],
-  프리미엄: [
-    // 대구 'A'사 오피스 (230평)
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfapwvj-ityg7n.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfappic-s83kjn.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfaqcmw-56st32.jpg",
-    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpfanbcz/cmpfanbcz-up-mpfaqk5o-qcl2ys.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc8cx9u/cmpc8cx9u-up-mpc8l9ma-endij5.jpg",
+    "https://pub-8e77b76eec1b4e0987970dbd7b7777d7.r2.dev/photos/commercial/cmpc8cx9u/cmpc8cx9u-up-mpc8l9oo-01iiie.jpg",
   ],
 }
 
