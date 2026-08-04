@@ -28,7 +28,8 @@ export default async function AccountsPage() {
           </Link>
           <h1 className="text-pretty text-3xl font-bold tracking-tight">계정 관리</h1>
           <p className="text-muted-foreground">
-            현장관리 대시보드에 이미 있는 계정에게 견적 계산기 관리자 접근 권한을 부여하거나 등급을 바꿉니다.
+            현장관리 대시보드 계정으로 로그인하면 자동으로 관리자 등급이 부여됩니다. 이 화면에서는 등급을
+            바꾸거나(예: 수퍼관리자로 승격), 아직 로그인하지 않은 사람을 미리 등록할 수 있습니다.
             아이디/비밀번호는 여기서 만들지 않고, 현장관리 대시보드 계정을 그대로 씁니다.
           </p>
         </header>

@@ -54,7 +54,12 @@ export function AccountsManager({
   }
 
   function handleDelete(loginId: string) {
-    if (!window.confirm(`${loginId} 계정의 견적 계산기 관리자 접근 권한을 없앨까요?`)) return
+    if (
+      !window.confirm(
+        `${loginId} 항목을 목록에서 지울까요? (완전히 막히는 건 아니고, 다음에 다시 로그인하면 기본 관리자 등급으로 자동 등록됩니다.)`
+      )
+    )
+      return
     setError(null)
     startTransition(async () => {
       const result = await deleteAccount(loginId)
@@ -176,9 +181,10 @@ export function AccountsManager({
         </table>
       </div>
       <p className="text-xs text-muted-foreground">
-        {ROLE_LABEL.super_admin} 은 계정 관리 권한, {ROLE_LABEL.admin}/{ROLE_LABEL.staff} 는 견적 요청 조회 권한만
-        갖습니다. 아이디/비밀번호는 현장관리 대시보드 계정을 그대로 쓰므로 여기서는 만들 수 없고, 접근 권한(등급)만
-        관리합니다. 본인 계정의 권한은 변경하거나 삭제할 수 없습니다.
+        현장관리 대시보드 계정으로 로그인하면 첫 로그인 시 자동으로 {ROLE_LABEL.admin} 등급이 부여됩니다.
+        {ROLE_LABEL.super_admin} 은 계정 관리 권한까지 갖고, {ROLE_LABEL.admin}/{ROLE_LABEL.staff} 는 견적 요청
+        조회 권한만 갖습니다. 아이디/비밀번호는 현장관리 대시보드 계정을 그대로 쓰므로 여기서는 만들 수 없고,
+        접근 등급만 관리합니다. 본인 계정의 권한은 변경하거나 목록에서 지울 수 없습니다.
       </p>
     </div>
   )
